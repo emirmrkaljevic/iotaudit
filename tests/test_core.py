@@ -77,3 +77,24 @@ def test_mcp_tools():
 
     names = {t.name for t in asyncio.run(create_server().list_tools())}
     assert {"analyze_pcap", "capture", "scan_device"} <= names
+
+
+def test_arp_safety_and_forwarding():
+    import iotaudit.arp as arp
+
+    # refuses public IPs
+    try:
+        arp.ArpSpoofer("8.8.8.8", "192.168.1.1")
+        raise AssertionError("public IP should be rejected")
+    except ValueError:
+        pass
+    # IPForwarding knows a key on supported platforms (Linux CI)
+    f = arp.IPForwarding()
+    assert f.key in (None, "net.ipv4.ip_forward", "net.inet.ip.forwarding")
+
+
+def test_imipaw_profile_loads():
+    from iotaudit.profiles import load_profiles
+
+    ids = {p["id"] for p in load_profiles()}
+    assert "imipaw-pettech-feeder" in ids

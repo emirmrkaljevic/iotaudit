@@ -1,0 +1,13 @@
+id: imipaw-pettech-feeder
+name: IMIPAW automatic pet feeder (PETTECH app, Tuya-based)
+match:
+  mac_vendors: ["Tuya", "Espressif"]
+  domains: ["tuyaeu.com", "tuyaus.com", "tuya.com", "smart321.com"]
+expected_domains: ["tuyaeu.com", "tuyaus.com", "tuyacn.com", "tuya.com", "smart321.com", "ntp.org", "aliyuncs.com"]
+expected_ports: [443, 8883, 123, 6668]
+notes: >
+  Observed facts: IMIPAW Wi-Fi feeders (e.g. DU3L-W-02 / DUW21) use Tuya WBR3/WBR3D Wi-Fi+BT
+  modules and the PETTECH app (a Tuya OEM/SmartLife-based app; manual links to smart321.com), so
+  expect the Tuya region cloud: HTTPS (443) + MQTT over TLS (8883), NTP (123), and the Tuya LAN
+  control protocol (6668). 2.4GHz only. Confirm per unit from the actual capture; domains and
+  region (EU/US/CN) vary by account. This profile reflects module/app evidence, not a vendor claim.

@@ -26,7 +26,8 @@ pip install "iotaudit[mcp,geo] @ git+https://github.com/emirmrkaljevic/iotaudit"
 sudo apt install nmap            # optional, for --scan
 ```
 
-Linux with NetworkManager is needed for hotspot mode. Capturing requires root (or `CAP_NET_RAW`).
+Hotspot mode needs Linux with NetworkManager. **ARP mode and pcap analysis also work on macOS**
+(libpcap). Capturing requires root (`sudo`).
 
 ## Quick start
 
@@ -39,6 +40,25 @@ sudo iotaudit capture --mode hotspot --iface wlan0 --ssid iotaudit --password 'c
 ```
 
 Use the companion app normally (feed, stream, update) during the capture, then leave the device idle.
+
+**1b. ARP mode (macOS or Linux, own network only).** No hotspot, no re-pairing: iotaudit
+ARP-spoofs *one* device you own so its traffic passes through your computer, then restores the
+ARP tables and IP-forwarding setting on exit.
+
+```bash
+# macOS: install first
+brew install nmap
+pipx install "git+https://github.com/emirmrkaljevic/iotaudit"   # or: pip install --user ...
+
+# find the feeder's IP (look for its MAC vendor, e.g. Tuya/Espressif)
+arp -a
+
+sudo iotaudit capture --mode arp --device 192.168.1.50 --duration 900 \
+     --i-own-this-network --scan --out ~/feeder.html
+```
+
+It auto-detects your router; pass `--gateway 192.168.1.1` to override. Use the app during the
+capture, then leave the device idle.
 
 **2. Existing pcap** (from Wireshark, your router, OpenWrt `tcpdump`, ...):
 
