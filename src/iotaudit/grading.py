@@ -30,7 +30,19 @@ def findings_for(device) -> list[dict]:
     if len(countries) >= 3:
         f.append({"severity": "low", "title": "Data sent to many countries",
                   "detail": "Destinations in: " + ", ".join(sorted(countries))})
-    return f
+    return [_normalize(x) for x in f]
+
+
+CATEGORY_BY_TITLE = {"Unencrypted": "encryption", "Tracker": "tracker", "Destination": "destination",
+                     "Outdated TLS": "encryption", "Open port": "port", "Data sent": "destination"}
+
+
+def _normalize(x: dict) -> dict:
+    """Every finding carries category + confidence (observed facts are 'certain')."""
+    x.setdefault("confidence", "certain")
+    x.setdefault("category", next((c for k, c in CATEGORY_BY_TITLE.items()
+                                   if x["title"].startswith(k)), "other"))
+    return x
 
 
 def grade(findings: list[dict]) -> tuple[int, str]:

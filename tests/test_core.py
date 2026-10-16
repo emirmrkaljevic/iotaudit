@@ -50,6 +50,7 @@ def test_pipeline(tmp_path):
     assert dests["3.120.1.1"]["encrypted"] and dests["3.120.1.1"]["expected"]
     assert not dests["47.1.2.3"]["encrypted"] and dests["47.1.2.3"]["tracker"]
     assert d["grade"] in "CDEF"
+    assert all(f["confidence"] == "certain" and f["category"] for f in d["findings"])
     html = render_html(devs)
     assert "tuyaeu.com" in html and DEV in html
 

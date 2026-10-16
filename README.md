@@ -102,6 +102,8 @@ Tools: `analyze_pcap`, `capture`, `scan_device`. Capture and scan require explic
 - Larger tracker list and device profile library
 - PDF export, continuous mode
 
+See [ROADMAP.md](ROADMAP.md) for the full plan (traffic classification with confidence levels, phone support, CVE/UPnP/DNS checks, continuous mode).
+
 ## License
 
 MIT

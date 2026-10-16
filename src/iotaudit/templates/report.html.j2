@@ -27,7 +27,7 @@ All data was processed locally.</p>
   {% if d.profile %}&middot; profile: {{ d.profile }}{% endif %} &middot; score {{ d.score }}/100</p>
   <h3>Findings</h3>
   {% if d.findings %}<ul>{% for f in d.findings %}
-    <li><span class="{{ f.severity }}">[{{ f.severity }}]</span> <b>{{ f.title }}</b> &mdash; {{ f.detail }}</li>
+    <li><span class="{{ f.severity }}">[{{ f.severity }}]</span> <b>{{ f.title }}</b> &mdash; {{ f.detail }}{% if f.confidence and f.confidence != "certain" %} <span class="tag">confidence: {{ f.confidence }}</span>{% endif %}</li>
   {% endfor %}</ul>{% else %}<p>No issues observed.</p>{% endif %}
   <h3>Destinations</h3>
   <table><tr><th>Domain(s)</th><th>IP</th><th>Country</th><th>Organisation</th><th>Ports</th><th>Bytes out</th><th>Encrypted</th></tr>
