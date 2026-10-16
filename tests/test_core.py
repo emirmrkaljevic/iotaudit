@@ -114,11 +114,11 @@ def test_discover_format_and_pick():
          "hostname": None, "role": "this-host", "likely_iot": False},
     ]
     # Pretend identify already ran
-    for d, looks in zip(devs, ["Router / gateway", "Imipaw-style pet feeder (Tuya)", "This Mac / PC"], strict=True):
+    for d, looks in zip(devs, ["Router / gateway", "Tuya device (port 6668 open)", "This Mac / PC"], strict=True):
         d["looks_like"] = looks
         d["id_confidence"] = "high"
     t = format_table(devs)
-    assert "Imipaw-style pet feeder (Tuya)" in t and "192.168.1.50" in t
+    assert "Tuya device (port 6668 open)" in t and "192.168.1.50" in t
     assert "Router / gateway" in t and "This Mac / PC" in t
     assert pick(devs, io.StringIO("2\n"), io.StringIO())["ip"] == "192.168.1.50"
     assert pick(devs, io.StringIO("q\n"), io.StringIO()) is None
@@ -262,17 +262,29 @@ def test_tuya_profile_by_mqtt_aws():
     dest = d["destinations"][0]
     assert dest["org"] and "Amazon" in dest["org"]
     assert "MQTT-over-TLS" in dest["protocols"]
-    prof = d["profile"] or ""
-    assert prof and ("IMIPAW" in prof.upper() or "Tuya" in prof or "pet feeder" in prof.lower())
+    # AWS+8883 alone must NOT lock an Imipaw/Tuya profile
+    assert not d["profile"] or "IMIPAW" not in (d["profile"] or "").upper()
+    assert any("possibly Tuya" in f["title"] or "MQTT" in f["title"] for f in d["findings"])
     assert d["grade"] in "CDEF"  # limited data, not A
 
 
-def test_identify_oui_and_ports():
+def test_identify_oui_alone_is_generic():
     from iotaudit.identify import identify_device
 
-    info = identify_device("192.168.0.2", mac="70:87:9e:00:00:01",
-                           tuya={"192.168.0.2": {"tuya": True, "gwId": "abc"}})
-    assert "Tuya" in info["looks_like"] or "Imipaw" in info["looks_like"]
-    assert info["confidence"] in ("high", "medium", "certain")
+    # OUI alone: no brand/model, low confidence, shows vendor
+    info = identify_device("192.168.0.2", mac="70:87:9e:00:00:01")
+    assert "Imipaw" not in info["looks_like"]
+    assert "feeder" not in info["looks_like"].lower()
+    assert info["confidence"] == "low"
+    assert "OUI only" in info["looks_like"] or "IoT module" in info["looks_like"]
+
+    # Real evidence wins and cites the source
+    tuya = identify_device("192.168.0.2", mac="70:87:9e:00:00:01",
+                           tuya={"192.168.0.2": {"tuya": True, "gwId": "abcdef123456"}})
+    assert "Tuya device" in tuya["looks_like"] and "LAN broadcast" in tuya["looks_like"]
+    assert tuya["confidence"] == "high"
+    assert "Imipaw" not in tuya["looks_like"]
+
+    # monkeypatch-free: just check role shortcuts
     apple = identify_device("192.168.0.10", mac="00:03:93:00:00:01", role="this-host")
     assert apple["looks_like"] == "This Mac / PC"

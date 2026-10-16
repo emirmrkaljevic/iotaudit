@@ -1,6 +1,11 @@
 """Fast LAN device identification (~10-20s): mDNS, SSDP/UPnP, NetBIOS, Tuya LAN UDP,
 telltale TCP ports, HTTP banners — combined with OUI into a 'Looks like' label + confidence.
-All local, no cloud calls."""
+All local, no cloud calls.
+
+OUI alone never asserts a brand or model — only vendor + generic hint at low confidence.
+Brand/type labels require real evidence (mDNS/SSDP/Tuya broadcast/ports/HTTP), and the
+list shows that evidence source.
+"""
 
 from __future__ import annotations
 
@@ -15,73 +20,49 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .enrich import is_likely_iot, mac_vendor
 
-# Service / port signatures -> (label, confidence)
+# Port open -> (label template with evidence, confidence)
 PORT_HINTS = {
-    6668: ("Tuya smart device", "high"),
-    6667: ("Tuya smart device", "medium"),
-    6666: ("Tuya smart device", "medium"),
-    8008: ("Chromecast / Google Cast", "high"),
-    8009: ("Chromecast / Google Cast", "high"),
-    8443: ("Chromecast setup", "low"),
-    62078: ("iPhone / iPad (lockdownd)", "high"),
-    7000: ("Apple AirPlay device", "high"),
-    5000: ("Apple / UPnP service", "low"),
-    554: ("IP camera (RTSP)", "high"),
-    8554: ("IP camera (RTSP)", "medium"),
-    9197: ("Samsung TV", "high"),
-    8001: ("Samsung TV", "high"),
-    8080: ("Embedded web UI", "low"),
-    80: ("Web UI", "low"),
-    443: ("HTTPS service", "low"),
-    22: ("SSH device", "low"),
-    23: ("Telnet device", "medium"),
-    9100: ("Network printer", "high"),
-    631: ("Network printer (IPP)", "medium"),
-    1883: ("MQTT broker / IoT", "medium"),
-    8883: ("MQTT-TLS IoT device", "medium"),
-    54321: ("Xiaomi miIO device", "high"),
-    8899: ("ONVIF camera", "medium"),
+    6668: ("Tuya device (port 6668 open)", "high"),
+    6667: ("Tuya device (port 6667 open)", "medium"),
+    6666: ("Tuya device (port 6666 open)", "medium"),
+    8008: ("Chromecast / Google Cast (port 8008)", "high"),
+    8009: ("Chromecast / Google Cast (port 8009)", "high"),
+    62078: ("iPhone / iPad (lockdownd port 62078)", "high"),
+    7000: ("Apple AirPlay device (port 7000)", "high"),
+    554: ("IP camera (RTSP port 554)", "high"),
+    8554: ("IP camera (RTSP port 8554)", "medium"),
+    9197: ("Samsung TV (port 9197)", "high"),
+    8001: ("Samsung TV (port 8001)", "high"),
+    9100: ("Network printer (port 9100)", "high"),
+    631: ("Network printer (IPP port 631)", "medium"),
+    54321: ("Xiaomi miIO device (port 54321)", "high"),
+    8899: ("ONVIF camera (port 8899)", "medium"),
+    23: ("Telnet device (port 23)", "medium"),
 }
 
 MDNS_TYPES = [
-    "_hap._tcp.local.",
-    "_homekit._tcp.local.",
-    "_googlecast._tcp.local.",
-    "_airplay._tcp.local.",
-    "_raop._tcp.local.",
-    "_spotify-connect._tcp.local.",
-    "_printer._tcp.local.",
-    "_ipp._tcp.local.",
-    "_http._tcp.local.",
-    "_androidtvremote2._tcp.local.",
-    "_sftp-ssh._tcp.local.",
+    "_hap._tcp.local.", "_homekit._tcp.local.", "_googlecast._tcp.local.",
+    "_airplay._tcp.local.", "_raop._tcp.local.", "_spotify-connect._tcp.local.",
+    "_printer._tcp.local.", "_ipp._tcp.local.", "_http._tcp.local.",
+    "_androidtvremote2._tcp.local.", "_sftp-ssh._tcp.local.",
 ]
 
 MDNS_LABEL = {
-    "_hap": ("Apple HomeKit device", "high"),
-    "_homekit": ("Apple HomeKit device", "high"),
-    "_googlecast": ("Chromecast / Google Cast", "high"),
-    "_airplay": ("Apple AirPlay device", "high"),
-    "_raop": ("Apple AirPlay speaker", "high"),
-    "_spotify-connect": ("Spotify Connect speaker", "high"),
-    "_printer": ("Network printer", "high"),
-    "_ipp": ("Network printer", "high"),
-    "_androidtvremote2": ("Android TV", "high"),
+    "_hap": ("Apple HomeKit device (mDNS _hap)", "high"),
+    "_homekit": ("Apple HomeKit device (mDNS)", "high"),
+    "_googlecast": ("Chromecast / Google Cast (mDNS)", "high"),
+    "_airplay": ("Apple AirPlay device (mDNS)", "high"),
+    "_raop": ("Apple AirPlay speaker (mDNS)", "high"),
+    "_spotify-connect": ("Spotify Connect speaker (mDNS)", "high"),
+    "_printer": ("Network printer (mDNS)", "high"),
+    "_ipp": ("Network printer (mDNS _ipp)", "high"),
+    "_androidtvremote2": ("Android TV (mDNS)", "high"),
 }
 
-OUI_LABELS = (
-    (("apple",), "Apple device", "medium"),
-    (("samsung",), "Samsung device", "medium"),
-    (("espressif", "tuya", "da xia long que", "bilian", "beken"), "Tuya / ESP smart device", "medium"),
-    (("xiaomi", "beijing xiaomi"), "Xiaomi device", "medium"),
-    (("lg innotek", "lg electronics"), "LG device (phone/TV module)", "medium"),
-    (("amazon",), "Amazon / Echo / Fire device", "medium"),
-    (("google",), "Google device", "medium"),
-    (("raspberry",), "Raspberry Pi", "high"),
-    (("ubiquiti", "mikrotik", "tp-link", "netgear", "asus", "cisco"), "Network gear", "medium"),
-    (("lcfc", "lenovo", "hewlett", "dell", "intel"), "PC / laptop", "medium"),
-    (("shenzhen sdmc",), "Android TV / set-top box", "medium"),
-    (("maxlinear",), "Cable modem / gateway chip", "low"),
+# Vendors that typically make Wi-Fi SoCs / modules for white-label IoT.
+IOT_MODULE_VENDORS = (
+    "espressif", "tuya", "beken", "bilian", "da xia long que", "realtek",
+    "hangzhou", "mxchip", "ai-thinker", "high-flying", "newracom",
 )
 
 
@@ -120,13 +101,9 @@ def http_title(ip: str, port: int = 80, timeout: float = 0.8) -> str | None:
 
 
 def ssdp_search(timeout: float = 2.0) -> dict[str, dict]:
-    """M-SEARCH and optionally fetch device description. Returns {ip: info}."""
     msg = (
-        b"M-SEARCH * HTTP/1.1\r\n"
-        b"HOST: 239.255.255.250:1900\r\n"
-        b"MAN: \"ssdp:discover\"\r\n"
-        b"MX: 2\r\n"
-        b"ST: ssdp:all\r\n\r\n"
+        b"M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\n"
+        b'MAN: "ssdp:discover"\r\nMX: 2\r\nST: ssdp:all\r\n\r\n'
     )
     found: dict[str, dict] = {}
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -153,11 +130,13 @@ def ssdp_search(timeout: float = 2.0) -> dict[str, dict]:
                     with urllib.request.urlopen(loc, timeout=0.8) as resp:
                         xml = resp.read(65536)
                     root = ET.fromstring(xml)
+
                     def find(tag, node=root):
                         for el in node.iter():
                             if el.tag.endswith(tag) and el.text:
                                 return el.text.strip()
                         return None
+
                     info["friendly_name"] = find("friendlyName")
                     info["manufacturer"] = find("manufacturer")
                     info["model_name"] = find("modelName")
@@ -169,9 +148,6 @@ def ssdp_search(timeout: float = 2.0) -> dict[str, dict]:
 
 
 def mdns_browse(timeout: float = 2.5) -> dict[str, list[str]]:
-    """Best-effort mDNS PTR queries. Returns {ip: [service,...]} when A records seen.
-    Pure-stdlib; no zeroconf dependency. Incomplete but catches many Cast/AirPlay/HAP devices."""
-    # Minimal DNS query builder
     def encode_name(name: str) -> bytes:
         out = b""
         for label in name.rstrip(".").split("."):
@@ -185,7 +161,7 @@ def mdns_browse(timeout: float = 2.5) -> dict[str, list[str]]:
     try:
         for i, svc in enumerate(MDNS_TYPES):
             txn = struct.pack("!HHHHHH", 0x1200 + i, 0, 1, 0, 0, 0)
-            query = txn + encode_name(svc) + struct.pack("!HH", 12, 1)  # PTR IN
+            query = txn + encode_name(svc) + struct.pack("!HH", 12, 1)
             try:
                 sock.sendto(query, ("224.0.0.251", 5353))
             except OSError:
@@ -197,11 +173,10 @@ def mdns_browse(timeout: float = 2.5) -> dict[str, list[str]]:
             except TimeoutError:
                 break
             ip = addr[0]
-            # Heuristic: map responder IP to services whose name bytes appear in payload
             text = data.decode("latin-1", "replace").lower()
             hits = results.setdefault(ip, [])
             for svc in MDNS_TYPES:
-                key = svc.split(".")[0]  # _hap
+                key = svc.split(".")[0]
                 if key.lstrip("_") in text or key in text:
                     if key not in hits:
                         hits.append(key)
@@ -211,7 +186,6 @@ def mdns_browse(timeout: float = 2.5) -> dict[str, list[str]]:
 
 
 def netbios_name(ip: str, timeout: float = 0.6) -> str | None:
-    # NetBIOS node status query
     payload = (
         b"\x00\x00\x00\x10\x00\x01\x00\x00\x00\x00\x00\x00"
         + b"\x20CKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\x00\x00\x21\x00\x01"
@@ -226,8 +200,7 @@ def netbios_name(ip: str, timeout: float = 0.6) -> str | None:
         n = data[56]
         if n < 1 or len(data) < 57 + 18:
             return None
-        raw = data[57:57 + 15]
-        return raw.decode("ascii", "replace").strip("\x00 ")
+        return data[57:57 + 15].decode("ascii", "replace").strip("\x00 ")
     except OSError:
         return None
     finally:
@@ -235,7 +208,6 @@ def netbios_name(ip: str, timeout: float = 0.6) -> str | None:
 
 
 def tuya_lan_listen(timeout: float = 2.0) -> dict[str, dict]:
-    """Listen for Tuya LAN discovery broadcasts on UDP 6666/6667."""
     found: dict[str, dict] = {}
     socks = []
     for port in (6666, 6667):
@@ -253,9 +225,7 @@ def tuya_lan_listen(timeout: float = 2.0) -> dict[str, dict]:
         for s in socks:
             try:
                 data, addr = s.recvfrom(65535)
-            except TimeoutError:
-                continue
-            except OSError:
+            except (TimeoutError, OSError):
                 continue
             ip = addr[0]
             info = found.setdefault(ip, {"tuya": True})
@@ -271,63 +241,59 @@ def tuya_lan_listen(timeout: float = 2.0) -> dict[str, dict]:
     return found
 
 
-def _oui_guess(vendor: str | None) -> tuple[str | None, str]:
+def _oui_guess(vendor: str | None) -> str | None:
+    """Vendor-only hint from OUI. Always low confidence; never names a product."""
     if not vendor:
-        return None, "low"
+        return None
     if vendor.startswith("random"):
-        return "Phone / laptop (randomized MAC)", "medium"
+        return "Phone/laptop (randomized MAC)"
     vl = vendor.lower()
-    for keys, label, conf in OUI_LABELS:
-        if any(k in vl for k in keys):
-            return label, conf
-    if is_likely_iot(vendor):
-        return f"IoT device ({vendor})", "low"
-    return f"Device ({vendor})", "low"
+    if any(k in vl for k in IOT_MODULE_VENDORS) or is_likely_iot(vendor):
+        return f"{vendor} (IoT module maker, OUI only)"
+    return f"{vendor} device (OUI only)"
 
 
 def identify_device(ip: str, mac: str | None = None, hostname: str | None = None,
                     role: str | None = None, ssdp: dict | None = None,
                     mdns: dict | None = None, tuya: dict | None = None) -> dict:
-    """Return {looks_like, confidence, evidence} for one device."""
+    """Return {looks_like, confidence, evidence}. Brand/type needs real evidence."""
     evidence: list[str] = []
-    candidates: list[tuple[str, str]] = []  # label, confidence
+    # (label, confidence, source) — source "oui" is never preferred over active evidence
+    candidates: list[tuple[str, str, str]] = []
 
     if role == "router":
         return {"looks_like": "Router / gateway", "confidence": "certain",
-                "evidence": ["default gateway"]}
+                "evidence": ["default gateway"], "open_ports": []}
     if role == "this-host":
         return {"looks_like": "This Mac / PC", "confidence": "certain",
-                "evidence": ["local address"]}
+                "evidence": ["local address"], "open_ports": []}
 
     vendor = mac_vendor(mac)
     if vendor:
         evidence.append(f"OUI: {vendor}")
-        label, conf = _oui_guess(vendor)
+        label = _oui_guess(vendor)
         if label:
-            candidates.append((label, conf))
+            candidates.append((label, "low", "oui"))
 
     if hostname:
         evidence.append(f"hostname: {hostname}")
         hl = hostname.lower()
         if "iphone" in hl or "ipad" in hl:
-            candidates.append(("iPhone / iPad", "high"))
+            candidates.append((f"iPhone/iPad (hostname {hostname})", "high", "hostname"))
         elif "android" in hl:
-            candidates.append(("Android phone", "high"))
+            candidates.append((f"Android phone (hostname {hostname})", "high", "hostname"))
         elif "macbook" in hl or "imac" in hl:
-            candidates.append(("Mac", "high"))
-        elif any(x in hl for x in ("tv", "roku", "firetv", "shield")):
-            candidates.append(("Smart TV / streamer", "medium"))
+            candidates.append((f"Mac (hostname {hostname})", "high", "hostname"))
         elif "printer" in hl:
-            candidates.append(("Network printer", "high"))
+            candidates.append((f"Printer (hostname {hostname})", "high", "hostname"))
 
-    nb = None
     try:
         nb = netbios_name(ip)
     except Exception:  # noqa: BLE001
-        pass
+        nb = None
     if nb:
         evidence.append(f"NetBIOS: {nb}")
-        candidates.append((f"Windows PC ({nb})", "medium"))
+        candidates.append((f"Windows PC (NetBIOS {nb})", "medium", "netbios"))
 
     if ssdp and ip in ssdp:
         info = ssdp[ip]
@@ -335,62 +301,59 @@ def identify_device(ip: str, mac: str | None = None, hostname: str | None = None
         mfr = info.get("manufacturer")
         if name:
             evidence.append(f"SSDP: {name}")
-            candidates.append((name, "high"))
+            label = f"{name} (SSDP)"
+            if mfr:
+                label = f"{name} — {mfr} (SSDP)"
+            candidates.append((label, "high", "ssdp"))
         elif mfr:
-            candidates.append((f"{mfr} device", "medium"))
+            candidates.append((f"{mfr} device (SSDP)", "medium", "ssdp"))
 
     if mdns and ip in mdns:
         for svc in mdns[ip]:
             evidence.append(f"mDNS: {svc}")
             if svc in MDNS_LABEL:
-                candidates.append(MDNS_LABEL[svc])
+                label, conf = MDNS_LABEL[svc]
+                candidates.append((label, conf, "mdns"))
 
     if tuya and ip in tuya:
         evidence.append("Tuya LAN broadcast")
         pk = tuya[ip].get("productKey") or tuya[ip].get("gwId")
-        label = "Tuya smart device (Imipaw-style feeder/plug/camera)"
-        if pk:
-            evidence.append(f"Tuya id: {pk[:12]}")
-        candidates.append((label, "high"))
+        detail = f"gwId={pk[:12]}" if pk else "UDP 6666/6667"
+        candidates.append((f"Tuya device (LAN broadcast, {detail})", "high", "tuya"))
 
     open_ports: list[int] = []
     try:
         open_ports = probe_ports(ip)
     except Exception:  # noqa: BLE001
         pass
-    for p in open_ports:
-        if p in PORT_HINTS:
-            label, conf = PORT_HINTS[p]
-            evidence.append(f"open {p}/tcp")
-            candidates.append((label, conf))
+    for port in open_ports:
+        if port in PORT_HINTS:
+            label, conf = PORT_HINTS[port]
+            evidence.append(f"open {port}/tcp")
+            candidates.append((label, conf, "port"))
     if 80 in open_ports or 8080 in open_ports:
         title = http_title(ip, 80 if 80 in open_ports else 8080)
         if title:
             evidence.append(f"HTTP title: {title}")
-            candidates.append((title, "high"))
+            candidates.append((f"{title} (HTTP title)", "high", "http"))
 
-    # Prefer higher confidence, then more specific labels
     rank = {"certain": 4, "high": 3, "medium": 2, "low": 1}
-    if not candidates:
+    active = [c for c in candidates if c[2] != "oui"]
+    oui_only = [c for c in candidates if c[2] == "oui"]
+    if active:
+        active.sort(key=lambda x: rank.get(x[1], 0), reverse=True)
+        best_label, best_conf = active[0][0], active[0][1]
+    elif oui_only:
+        best_label, best_conf = oui_only[0][0], "low"
+    else:
         return {"looks_like": "Unknown device", "confidence": "low", "evidence": evidence,
                 "open_ports": open_ports}
-    candidates.sort(key=lambda x: rank.get(x[1], 0), reverse=True)
-    best_label, best_conf = candidates[0]
-    # Refine Tuya + module OUI -> feeder hint for known module prefix
-    if mac and mac.lower().startswith("70:87:9e") and "Tuya" in best_label:
-        best_label = "Imipaw-style pet feeder (Tuya)"
-        best_conf = "high"
-    elif vendor and "da xia long que" in vendor.lower() and any("Tuya" in c[0] for c in candidates):
-        best_label = "Imipaw-style pet feeder (Tuya)"
-        best_conf = "high"
-    elif vendor and "bilian" in vendor.lower() and any("Tuya" in c[0] or "ESP" in c[0] for c in candidates):
-        best_label = "Tuya smart device (Wi-Fi module)"
     return {"looks_like": best_label, "confidence": best_conf, "evidence": evidence,
             "open_ports": open_ports}
 
 
 def identify_network(devices: list[dict], budget_s: float = 15.0) -> list[dict]:
-    """Enrich a list of {ip,mac,...} devices with looks_like. Runs shared LAN listens once."""
+    """Enrich devices with looks_like. Shared LAN listens once, then per-host probes."""
     t0 = time.time()
     ssdp: dict = {}
     mdns: dict = {}
@@ -423,26 +386,20 @@ def identify_network(devices: list[dict], budget_s: float = 15.0) -> list[dict]:
     for t in threads:
         t.join(timeout=budget_s / 2)
 
-    remaining = max(1.0, budget_s - (time.time() - t0))
-    # Probe devices (skip multicast/router flood): sequential with shared remaining budget
-    per = max(0.5, remaining / max(1, len(devices)))
     out = []
     for d in devices:
-        # slightly truncate per-device work if over budget
-        if time.time() - t0 > budget_s:
-            info = identify_device(d["ip"], d.get("mac"), d.get("hostname"), d.get("role"),
-                                   ssdp, mdns, tuya)
-            # skip port probe by passing empty — call with role only shortcuts
-        else:
-            info = identify_device(d["ip"], d.get("mac"), d.get("hostname"), d.get("role"),
-                                   ssdp, mdns, tuya)
+        info = identify_device(d["ip"], d.get("mac"), d.get("hostname"), d.get("role"),
+                               ssdp, mdns, tuya)
         d = dict(d)
         d["looks_like"] = info["looks_like"]
         d["id_confidence"] = info["confidence"]
         d["id_evidence"] = info.get("evidence") or []
         d["open_ports"] = info.get("open_ports") or []
-        if is_likely_iot(d.get("vendor")) or "Tuya" in (d["looks_like"] or "") or "IoT" in (d["looks_like"] or ""):
+        if is_likely_iot(d.get("vendor")) or "Tuya" in (d["looks_like"] or ""):
             d["likely_iot"] = True
         out.append(d)
-        _ = per  # budget hint kept for future adaptive probing
+        if time.time() - t0 > budget_s:
+            # Still identify remaining via OUI/role only (skip further port probes by
+            # short-circuiting — probe_ports still runs; budget is soft).
+            pass
     return out
