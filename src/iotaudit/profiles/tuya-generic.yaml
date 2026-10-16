@@ -1,0 +1,10 @@
+id: tuya-generic
+name: Tuya-based smart device (pet feeders, plugs, bulbs, cameras)
+match:
+  mac_vendors: ["Tuya", "Espressif"]
+  domains: ["tuyaeu.com", "tuyaus.com", "tuyacn.com", "tuya.com"]
+expected_domains: ["tuyaeu.com", "tuyaus.com", "tuyacn.com", "tuya.com", "ntp.org", "aliyuncs.com"]
+expected_ports: [443, 8883, 123, 6668]
+notes: >
+  Most white-label feeders/plugs run Tuya firmware. Normal: MQTT over TLS (8883) and HTTPS to
+  the Tuya region cloud. Port 6668 is the local LAN control protocol.

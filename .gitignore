@@ -1,0 +1,10 @@
+__pycache__/
+*.egg-info/
+.venv/
+dist/
+build/
+*.pcap
+*.pcapng
+iotaudit-report*.html
+.pytest_cache/
+.ruff_cache/

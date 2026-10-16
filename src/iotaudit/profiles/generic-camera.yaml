@@ -1,0 +1,10 @@
+id: generic-ip-camera
+name: Generic IP camera (RTSP/ONVIF)
+match:
+  mac_vendors: ["Reecam", "Amcrest", "Hikvision", "Dahua"]
+  domains: ["p2p", "hik-connect.com", "easy4ip.com", "amcrestcloud.com"]
+expected_domains: ["hik-connect.com", "easy4ip.com", "amcrestcloud.com", "ntp.org"]
+expected_ports: [443, 123]
+notes: >
+  Cameras often expose RTSP (554), ONVIF (80/8899) and telnet on the LAN. P2P relay services
+  may be used for remote viewing.

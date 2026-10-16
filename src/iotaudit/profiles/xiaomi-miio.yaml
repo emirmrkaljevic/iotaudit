@@ -1,0 +1,9 @@
+id: xiaomi-miio
+name: Xiaomi / Mi Home device (miIO)
+match:
+  mac_vendors: ["Xiaomi"]
+  domains: ["io.mi.com", "xiaomi.com", "mi.com"]
+expected_domains: ["io.mi.com", "xiaomi.com", "mi.com", "xiaomi.net", "ntp.org"]
+expected_ports: [443, 8053, 123, 54321]
+notes: >
+  miIO devices use an encrypted UDP protocol to ot.io.mi.com (8053) and local port 54321.
