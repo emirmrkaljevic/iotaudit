@@ -31,6 +31,44 @@ class Destination:
     encrypted: bool = True
     tracker: bool = False
     expected: bool | None = None  # matches device profile?
+    traffic_class: TrafficClass | None = None
+    first_seen: float | None = None
+    last_seen: float | None = None
+
+
+CONFIDENCE_LEVELS = ("low", "medium", "high", "certain")
+CATEGORIES = (
+    "encryption", "destination", "tracker", "port", "credential", "cve", "upnp", "dns",
+    "lan-scan", "firmware", "traffic-class", "new-device",
+)
+TRAFFIC_CLASSES = ("video", "audio", "audio+video", "telemetry", "firmware-download", "unknown")
+
+
+@dataclass
+class Finding:
+    """One observation about a device. Inferred findings (e.g. traffic classification) carry a
+    confidence below "certain" and must be worded as indicators, never as fact."""
+
+    category: str
+    severity: str  # high / medium / low / info
+    title: str
+    detail: str
+    confidence: str = "certain"
+    evidence: dict = field(default_factory=dict)
+
+    def as_dict(self) -> dict:
+        return {"category": self.category, "severity": self.severity, "title": self.title,
+                "detail": self.detail, "confidence": self.confidence, "evidence": self.evidence}
+
+
+@dataclass
+class TrafficClass:
+    """Inferred content type of traffic to one destination (v0.2: bitrate/packet-size/timing)."""
+
+    label: str = "unknown"  # one of TRAFFIC_CLASSES
+    confidence: str = "low"
+    while_app_idle: bool | None = None
+    evidence: dict = field(default_factory=dict)
 
 
 @dataclass
