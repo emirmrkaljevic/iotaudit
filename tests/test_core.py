@@ -84,7 +84,7 @@ def test_arp_safety_and_forwarding():
 
     # refuses public IPs
     try:
-        arp.ArpSpoofer("8.8.8.8", "192.168.1.1")
+        arp.ArpSpoofer("8.8.8.8", "192.168.1.1", "en0")
         raise AssertionError("public IP should be rejected")
     except ValueError:
         pass
@@ -288,3 +288,74 @@ def test_identify_oui_alone_is_generic():
     # monkeypatch-free: just check role shortcuts
     apple = identify_device("192.168.0.10", mac="00:03:93:00:00:01", role="this-host")
     assert apple["looks_like"] == "This Mac / PC"
+
+
+
+def test_arp_sendp_uses_known_macs(monkeypatch):
+    """sendp must be used with Ether(dst=known_mac); never bare send() that ARP-resolves."""
+    import iotaudit.arp as arp
+
+    sent = []
+
+    class FakePkt:
+        def __init__(self, **kw):
+            self.kw = kw
+        def __truediv__(self, other):
+            self.kw["arp"] = getattr(other, "kw", other)
+            return self
+
+    class FakeEther:
+        def __init__(self, dst=None, src=None):
+            self.kw = {"dst": dst, "src": src}
+        def __truediv__(self, other):
+            return FakePkt(ether=self.kw, arp=getattr(other, "kw", other))
+
+    class FakeARP:
+        def __init__(self, **kw):
+            self.kw = kw
+
+    def fake_sendp(pkt, iface=None, verbose=False, count=1):
+        sent.append({"pkt": pkt.kw, "iface": iface})
+
+    monkeypatch.setattr("scapy.layers.l2.Ether", FakeEther)
+    monkeypatch.setattr("scapy.layers.l2.ARP", FakeARP)
+    monkeypatch.setattr("scapy.sendrecv.sendp", fake_sendp)
+
+    sp = arp.ArpSpoofer(
+        "192.168.0.50", "192.168.0.1", "en0",
+        target_mac="d8:1f:12:00:00:01", gateway_mac="00:09:5b:00:00:01",
+        our_mac_addr="aa:bb:cc:dd:ee:ff", interval=0.05,
+    )
+    sp.target_mac = "d8:1f:12:00:00:01"
+    sp.gateway_mac = "00:09:5b:00:00:01"
+    sp._sendp(sp.target_mac, sp.target_ip, sp.target_mac, sp.gateway_ip)
+    assert sent, "sendp was not called"
+    assert sent[0]["iface"] == "en0"
+    assert sent[0]["pkt"]["ether"]["dst"] == "d8:1f:12:00:00:01"
+    assert sent[0]["pkt"]["ether"]["src"] == "aa:bb:cc:dd:ee:ff"
+    assert sent[0]["pkt"]["ether"]["dst"] != "ff:ff:ff:ff:ff:ff"
+
+
+def test_resolve_iface_callable():
+    import iotaudit.arp as arp
+    assert callable(arp.resolve_iface)
+    assert callable(arp.our_mac)
+
+
+def test_live_progress_and_bpf(monkeypatch):
+    import iotaudit.arp as arp
+    import iotaudit.capture as cap
+
+    calls = {}
+
+    def fake_sniff(**kw):
+        calls.update(kw)
+
+    monkeypatch.setattr("scapy.all.sniff", fake_sniff)
+    monkeypatch.setattr(arp, "_quiet_scapy", lambda: None)
+
+    col = cap.Collector(["192.168.0.50"])
+    cap.live("en0", 1, col, bpf_filter="host 192.168.0.50", progress_every=1)
+    assert calls.get("iface") == "en0"
+    assert calls.get("filter") == "host 192.168.0.50"
+    assert calls.get("store") is False

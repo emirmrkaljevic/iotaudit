@@ -122,10 +122,59 @@ class Collector:
                     self.dns.setdefault(str(rr.rdata), set()).add(name)
 
 
-def live(iface: str, seconds: int, collector: Collector) -> Collector:
+def live(iface: str | None, seconds: int, collector: Collector,
+         bpf_filter: str | None = None, progress_every: int = 10) -> Collector:
+    """Sniff on iface for `seconds`. Prints a live counter every `progress_every` seconds.
+    If 0 packets from the focused device after 60s, prints a clear hint."""
+    import sys
+    import time
+
     from scapy.all import sniff
 
-    sniff(iface=iface, prn=collector.add, store=False, timeout=seconds)
+    from .arp import _quiet_scapy
+
+    _quiet_scapy()
+    started = time.time()
+    last_report = started
+    warned_empty = False
+    focused = set(collector.device_ips)
+
+    def _count_from_device() -> tuple[int, int]:
+        pkts = bytes_ = 0
+        for f in collector.flows.values():
+            if not focused or f.src in focused:
+                pkts += f.packets
+                bytes_ += f.bytes
+        return pkts, bytes_
+
+    def on_packet(pkt):
+        nonlocal last_report, warned_empty
+        collector.add(pkt)
+        now = time.time()
+        if now - last_report >= progress_every:
+            pkts, nbytes = _count_from_device()
+            who = (", ".join(sorted(focused)) if focused else "LAN")
+            print(f"  … packets seen from {who}: {pkts}, bytes: {nbytes}", file=sys.stderr, flush=True)
+            last_report = now
+            if not warned_empty and now - started >= 60 and pkts == 0:
+                warned_empty = True
+                print(
+                    "WARNING: 0 packets from the device after 60s. Check: same 2.4GHz Wi-Fi, "
+                    "no client isolation, IP forwarding on, and that ARP spoof is targeting "
+                    "the right MAC. Ctrl+C to abort.",
+                    file=sys.stderr, flush=True,
+                )
+
+    kwargs = dict(prn=on_packet, store=False, timeout=seconds)
+    if iface:
+        kwargs["iface"] = iface
+    if bpf_filter:
+        kwargs["filter"] = bpf_filter
+    print(f"Sniffing on {iface or 'default'} filter={bpf_filter!r} for {seconds}s "
+          f"(Ctrl+C to stop)…", file=sys.stderr, flush=True)
+    sniff(**kwargs)
+    pkts, nbytes = _count_from_device()
+    print(f"Capture done: {pkts} packets / {nbytes} bytes from device.", file=sys.stderr)
     return collector
 
 
