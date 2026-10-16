@@ -115,3 +115,53 @@ def test_discover_format_and_pick():
     assert pick(devs, io.StringIO("q\n"), io.StringIO()) is None
     assert pick(devs, io.StringIO("9\n"), io.StringIO()) is None
     assert pick([], io.StringIO("1\n"), io.StringIO()) is None
+
+
+MACOS_ARP_A = """\
+? (192.168.1.1) at 0:1a:2b:3:4:5 on en0 ifscope [ethernet]
+router.home (192.168.1.1) at aa:bb:cc:dd:ee:ff on en0 ifscope [ethernet]
+? (192.168.1.50) at d8:1f:12:a:b:c on en0 ifscope [ethernet]
+? (192.168.1.60) at (incomplete) on en0 ifscope [ethernet]
+? (192.168.1.70) at 2:0:0:0:0:1 on en0 ifscope [ethernet]
+"""
+
+LINUX_IP_NEIGH = """\
+192.168.1.1 lladdr aa:bb:cc:dd:ee:ff REACHABLE
+192.168.1.50 lladdr d8:1f:12:0a:0b:0c STALE
+192.168.1.60 FAILED
+"""
+
+
+def test_normalize_mac_and_vendor_macos():
+    from iotaudit.enrich import mac_vendor, normalize_mac
+
+    assert normalize_mac("0:1a:2b:3:4:5") == "00:1a:2b:03:04:05"
+    assert normalize_mac("d8:1f:12:a:b:c") == "d8:1f:12:0a:0b:0c"
+    assert normalize_mac("(incomplete)") is None
+    assert normalize_mac("aa-bb-cc-dd-ee-ff") == "aa:bb:cc:dd:ee:ff"
+    assert normalize_mac("bad") is None
+    assert normalize_mac(":::") is None
+    # unpadded Tuya OUI must still resolve (this was the Sequoia crash)
+    assert mac_vendor("d8:1f:12:a:b:c") == "Tuya Smart"
+    assert mac_vendor("0:1a:2b:3:4:5") is None  # unknown, but must not raise
+    assert mac_vendor("2:0:0:0:0:1") == "Randomized MAC"  # LAA bit
+    assert mac_vendor("(incomplete)") is None
+    assert mac_vendor(":") is None
+    assert mac_vendor("") is None
+
+
+def test_parse_macos_arp_a_and_netmask():
+    from iotaudit.discover import _parse_netmask_hex, parse_arp_a
+
+    table = parse_arp_a(MACOS_ARP_A)
+    assert "192.168.1.60" not in table  # incomplete skipped
+    assert table["192.168.1.50"] == "d8:1f:12:0a:0b:0c"
+    assert table["192.168.1.1"] in ("00:1a:2b:03:04:05", "aa:bb:cc:dd:ee:ff")
+    assert table["192.168.1.70"] == "02:00:00:00:00:01"
+    linux = parse_arp_a(LINUX_IP_NEIGH)
+    assert linux["192.168.1.50"] == "d8:1f:12:0a:0b:0c"
+    assert "192.168.1.60" not in linux
+    assert _parse_netmask_hex("0xffffff00") == 24
+    assert _parse_netmask_hex("0xffff0000") == 16
+    assert _parse_netmask_hex("255.255.255.0") == 24
+    assert _parse_netmask_hex("bogus") is None

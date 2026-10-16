@@ -4,10 +4,12 @@ MAC vendor (small built-in OUI table), tracker detection. No network calls, no t
 from __future__ import annotations
 
 import os
+import re
 
 # Domain suffix -> organisation. Extend via profiles / PRs.
 DOMAIN_ORGS = {
-    "amazonaws.com": "Amazon AWS", "aws.amazon.com": "Amazon AWS", "cloudfront.net": "Amazon CloudFront",
+    "amazonaws.com": "Amazon AWS", "aws.amazon.com": "Amazon AWS",
+    "cloudfront.net": "Amazon CloudFront",
     "googleapis.com": "Google", "google.com": "Google", "gstatic.com": "Google",
     "1e100.net": "Google", "azure.com": "Microsoft Azure", "microsoft.com": "Microsoft",
     "tuya.com": "Tuya", "tuyaeu.com": "Tuya", "tuyaus.com": "Tuya", "tuyacn.com": "Tuya",
@@ -18,14 +20,12 @@ DOMAIN_ORGS = {
     "umeng.com": "Umeng (Alibaba analytics)", "bugly.qq.com": "Tencent Bugly", "qq.com": "Tencent",
 }
 
-# Minimal tracker/analytics list; full list import (e.g. DuckDuckGo Tracker Radar) planned.
 TRACKERS = {
     "doubleclick.net", "google-analytics.com", "app-measurement.com", "umeng.com",
     "bugly.qq.com", "crashlytics.com", "branch.io", "adjust.com", "appsflyer.com",
     "graph.facebook.com", "segment.io", "mixpanel.com", "amplitude.com", "sentry.io",
 }
 
-# Small OUI sample; `iotaudit` reads a full IEEE oui.txt if IOTAUDIT_OUI points to one.
 OUI = {
     "d8:1f:12": "Tuya Smart", "10:d5:61": "Tuya Smart", "68:57:2d": "Tuya Smart",
     "50:ec:50": "Beijing Xiaomi", "64:90:c1": "Beijing Xiaomi", "78:11:dc": "Xiaomi",
@@ -34,6 +34,28 @@ OUI = {
     "dc:a6:32": "Raspberry Pi", "f0:9f:c2": "Ubiquiti", "44:65:0d": "Amazon",
     "fc:65:de": "Amazon", "e8:ab:fa": "Shenzhen Reecam (cameras)", "9c:8e:cd": "Amcrest",
 }
+
+_MAC_SEP = re.compile(r"[:\-.]")
+
+
+def normalize_mac(mac: str | None) -> str | None:
+    """Return canonical aa:bb:cc:dd:ee:ff, or None if incomplete/invalid.
+    Accepts macOS unpadded forms like '0:1a:2b:3:4:5' and hyphen/dot separators."""
+    if not mac:
+        return None
+    raw = mac.strip().lower()
+    if not raw or "incomplete" in raw or raw in ("(incomplete)", "none", "unknown"):
+        return None
+    parts = _MAC_SEP.split(raw)
+    if len(parts) != 6:
+        return None
+    try:
+        octets = [int(p, 16) for p in parts]
+    except ValueError:
+        return None
+    if any(o < 0 or o > 255 for o in octets):
+        return None
+    return ":".join(f"{o:02x}" for o in octets)
 
 
 def suffix_match(name: str, table) -> str | None:
@@ -63,9 +85,9 @@ _oui_cache: dict[str, str] | None = None
 
 def mac_vendor(mac: str | None) -> str | None:
     global _oui_cache
-    if not mac:
+    norm = normalize_mac(mac)
+    if not norm:
         return None
-    prefix = mac.lower()[:8]
     if _oui_cache is None:
         _oui_cache = dict(OUI)
         path = os.environ.get("IOTAUDIT_OUI")
@@ -74,10 +96,13 @@ def mac_vendor(mac: str | None) -> str | None:
                 for line in fh:
                     if "(hex)" in line:
                         hexp, _, org = line.partition("(hex)")
-                        _oui_cache[hexp.strip().replace("-", ":").lower()] = org.strip()
-    if int(prefix[1], 16) & 2:
+                        key = normalize_mac(hexp.strip() + ":00:00:00")
+                        if key:
+                            _oui_cache[key[:8]] = org.strip()
+    # Locally Administered Address bit (2nd LSB of first octet) => randomized / private MAC
+    if int(norm[0:2], 16) & 0x02:
         return "Randomized MAC"
-    return _oui_cache.get(prefix)
+    return _oui_cache.get(norm[:8])
 
 
 class Geo:
