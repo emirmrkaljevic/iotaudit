@@ -106,11 +106,16 @@ def test_discover_format_and_pick():
     from iotaudit.discover import format_table, pick
 
     devs = [
-        {"ip": "192.168.1.1", "mac": "aa:bb:cc:dd:ee:ff", "vendor": "Ubiquiti", "hostname": "router"},
-        {"ip": "192.168.1.50", "mac": "d8:1f:12:00:00:01", "vendor": "Tuya Smart", "hostname": None},
+        {"ip": "192.168.1.1", "mac": "aa:bb:cc:dd:ee:ff", "vendor": "Ubiquiti",
+         "hostname": "router", "role": "router", "likely_iot": False},
+        {"ip": "192.168.1.50", "mac": "d8:1f:12:00:00:01", "vendor": "Tuya Smart",
+         "hostname": None, "role": None, "likely_iot": True},
+        {"ip": "192.168.1.10", "mac": "24:2a:ea:00:00:01", "vendor": "Apple",
+         "hostname": None, "role": "this-host", "likely_iot": False},
     ]
     t = format_table(devs)
     assert "likely IoT" in t and "192.168.1.50" in t
+    assert "router/gateway" in t and "this Mac/PC" in t
     assert pick(devs, io.StringIO("2\n"), io.StringIO())["ip"] == "192.168.1.50"
     assert pick(devs, io.StringIO("q\n"), io.StringIO()) is None
     assert pick(devs, io.StringIO("9\n"), io.StringIO()) is None
@@ -143,8 +148,8 @@ def test_normalize_mac_and_vendor_macos():
     assert normalize_mac(":::") is None
     # unpadded Tuya OUI must still resolve (this was the Sequoia crash)
     assert mac_vendor("d8:1f:12:a:b:c") == "Tuya Smart"
-    assert mac_vendor("0:1a:2b:3:4:5") is None  # unknown, but must not raise
-    assert mac_vendor("2:0:0:0:0:1") == "Randomized MAC"  # LAA bit
+    assert mac_vendor("0:1a:2b:3:4:5")  # resolves via bundled OUI, must not raise
+    assert mac_vendor("2:0:0:0:0:1") == "random (phone/laptop)"  # LAA bit
     assert mac_vendor("(incomplete)") is None
     assert mac_vendor(":") is None
     assert mac_vendor("") is None
@@ -165,3 +170,48 @@ def test_parse_macos_arp_a_and_netmask():
     assert _parse_netmask_hex("0xffff0000") == 16
     assert _parse_netmask_hex("255.255.255.0") == 24
     assert _parse_netmask_hex("bogus") is None
+
+
+
+def test_bundled_oui_emir_macs():
+    """Real MACs from Emir's Sequoia LAN must resolve via the bundled IEEE table."""
+    from iotaudit.discover import _is_multicast
+    from iotaudit.enrich import is_likely_iot, mac_vendor
+
+    expected = {
+        "00:50:f1:80:00:00": "Maxlinear",
+        "48:87:2d:1f:32:c2": "SHEN ZHEN DA XIA LONG QUE",
+        "e0:85:4d:71:35:4c": "LG Innotek",
+        "14:5d:34:e5:9a:21": "SHENZHEN BILIAN",
+        "a4:30:7a:fc:85:b8": "Samsung",
+        "1c:e8:9e:0f:9c:e4": "SJIT",
+        "5c:7b:5c:fd:0e:6d": "Shenzhen SDMC",
+        "24:2a:ea:04:c8:59": "Apple",
+        "54:e1:ad:a4:ab:77": "LCFC",
+    }
+    for mac, needle in expected.items():
+        v = mac_vendor(mac)
+        assert v and needle.lower() in v.lower(), (mac, v)
+    assert is_likely_iot(mac_vendor("48:87:2d:1f:32:c2"))
+    assert is_likely_iot(mac_vendor("14:5d:34:e5:9a:21"))
+    assert is_likely_iot(mac_vendor("5c:7b:5c:fd:0e:6d"))
+    assert not is_likely_iot(mac_vendor("24:2a:ea:04:c8:59"))
+    assert _is_multicast("224.0.0.251")
+    assert not _is_multicast("192.168.1.50")
+
+
+def test_arp_sweep_skips_multicast(monkeypatch):
+    from iotaudit import discover
+
+    monkeypatch.setattr(discover, "_arp_table", lambda: {
+        "192.168.1.50": "d8:1f:12:0a:0b:0c",
+        "224.0.0.251": "01:00:5e:00:00:fb",
+    })
+    monkeypatch.setattr(discover, "local_cidr", lambda iface=None: None)
+    monkeypatch.setattr(discover, "_self_ips", lambda: set())
+    monkeypatch.setattr(discover, "_gateway_ip", lambda: None)
+    monkeypatch.setattr(discover, "_reverse_dns", lambda ip: None)
+    devs = discover.arp_sweep()
+    ips = {d["ip"] for d in devs}
+    assert "192.168.1.50" in ips
+    assert "224.0.0.251" not in ips

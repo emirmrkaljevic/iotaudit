@@ -1,0 +1,4 @@
+oui.txt.gz is derived from the IEEE MA-L public OUI listing
+(https://standards-oui.ieee.org/oui/oui.txt), trimmed to prefix + short
+organisation name. IEEE owns the assignment data; this redistribution is
+for offline vendor identification only.

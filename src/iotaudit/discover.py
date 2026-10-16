@@ -10,7 +10,41 @@ import re
 import socket
 import subprocess
 
-from .enrich import mac_vendor, normalize_mac
+from .enrich import is_likely_iot, mac_vendor, normalize_mac
+
+
+def _is_multicast(ip: str) -> bool:
+    try:
+        return ipaddress.ip_address(ip).is_multicast
+    except ValueError:
+        return False
+
+
+def _self_ips() -> set[str]:
+    ips = set()
+    try:
+        hostname = socket.gethostname()
+        for info in socket.getaddrinfo(hostname, None, socket.AF_INET):
+            ips.add(info[4][0])
+    except OSError:
+        pass
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("192.0.2.1", 9))
+        ips.add(s.getsockname()[0])
+        s.close()
+    except OSError:
+        pass
+    return {i for i in ips if not i.startswith("127.")}
+
+
+def _gateway_ip() -> str | None:
+    try:
+        from .arp import default_gateway
+        return default_gateway()
+    except Exception:  # noqa: BLE001
+        return None
+
 
 
 def _parse_netmask_hex(token: str) -> int | None:
@@ -172,26 +206,43 @@ def arp_sweep(cidr: str | None = None, iface: str | None = None, timeout: int = 
             _ping_sweep(cidr)
     for ip, mac in _arp_table().items():
         found.setdefault(ip, mac)
+    self_ips = _self_ips()
+    gateway = _gateway_ip()
     devices = []
     for ip in sorted(found, key=lambda x: tuple(int(p) for p in x.split("."))):
+        if _is_multicast(ip):
+            continue
         mac = normalize_mac(found[ip]) or found[ip]
         try:
             vendor = mac_vendor(mac)
         except Exception:  # noqa: BLE001
             vendor = None
+        role = None
+        if ip == gateway:
+            role = "router"
+        elif ip in self_ips:
+            role = "this-host"
         devices.append({
             "ip": ip, "mac": mac, "vendor": vendor, "hostname": _reverse_dns(ip),
+            "role": role, "likely_iot": is_likely_iot(vendor),
         })
     return devices
 
 
 def format_table(devices: list[dict]) -> str:
-    lines = [f"{'#':>2}  {'IP':<16}{'MAC':<19}{'Vendor':<22}Hostname"]
+    lines = [f"{'#':>2}  {'IP':<16}{'MAC':<19}{'Vendor':<36}Note"]
     for i, d in enumerate(devices, 1):
-        hint = d["vendor"] or ""
-        if hint and any(k in hint for k in ("Tuya", "Espressif")):
-            hint += "  <- likely IoT"
-        lines.append(f"{i:>2}  {d['ip']:<16}{d['mac']:<19}{hint:<22}{d['hostname'] or ''}")
+        vendor = d.get("vendor") or ""
+        notes = []
+        if d.get("role") == "router":
+            notes.append("router/gateway")
+        elif d.get("role") == "this-host":
+            notes.append("this Mac/PC")
+        if d.get("likely_iot"):
+            notes.append("likely IoT")
+        if d.get("hostname"):
+            notes.append(d["hostname"])
+        lines.append(f"{i:>2}  {d['ip']:<16}{d['mac']:<19}{vendor:<36}{', '.join(notes)}")
     return "\n".join(lines)
 
 

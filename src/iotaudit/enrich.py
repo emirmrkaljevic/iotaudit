@@ -80,7 +80,56 @@ def is_tracker(domains) -> bool:
     return any(suffix_match(d, TRACKERS) for d in domains)
 
 
+
 _oui_cache: dict[str, str] | None = None
+
+# Substrings (case-insensitive) that often appear on IoT Wi-Fi / BLE modules.
+IOT_HINTS = (
+    "tuya", "espressif", "beken", "realtek", "rtl87", "xiaomi", "eshine",
+    "hangzhou", "shenzhen", "bilian", "esp32", "nordic semiconductor",
+    "silicon laboratories", "texas instruments", "mediatek", "newracom",
+    "shanghai high-flying", "ai-thinker", "mxchip", "wuxi", "qingdao",
+    "beijing xiaomi", "universial", "universal scientific", "azurewave",
+    "murata", "sparkfun", "particle", "ublox", "u-blox", "quectel",
+    "simcom", "fibocom", "meig", "longsung", "sdmc", "amcrest", "reecam",
+    "hikvision", "dahua", "tp-link", "tplink", "wyze", "aqara", "shelly",
+    "sonoff", "itead", "espress", "shanghai mxchip", "da xia long que",
+)
+
+
+def is_likely_iot(vendor: str | None) -> bool:
+    if not vendor:
+        return False
+    v = vendor.lower()
+    return any(h in v for h in IOT_HINTS)
+
+
+def _load_oui() -> dict[str, str]:
+    """Load bundled IEEE MA-L table (gzipped), falling back to the tiny built-in set."""
+    cache = dict(OUI)
+    try:
+        import gzip
+        from importlib import resources
+
+        raw = (resources.files("iotaudit") / "data" / "oui.txt.gz").read_bytes()
+        for line in gzip.decompress(raw).decode("utf-8", "replace").splitlines():
+            if not line or "\t" not in line and "	" not in line:
+                continue
+            prefix, _, org = line.partition("	")
+            if len(prefix) == 8 and org:
+                cache[prefix] = org
+    except (FileNotFoundError, OSError, ModuleNotFoundError):
+        pass
+    path = os.environ.get("IOTAUDIT_OUI")
+    if path and os.path.exists(path):
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if "(hex)" in line:
+                    hexp, _, org = line.partition("(hex)")
+                    key = normalize_mac(hexp.strip() + ":00:00:00")
+                    if key:
+                        cache[key[:8]] = org.strip()
+    return cache
 
 
 def mac_vendor(mac: str | None) -> str | None:
@@ -88,20 +137,11 @@ def mac_vendor(mac: str | None) -> str | None:
     norm = normalize_mac(mac)
     if not norm:
         return None
-    if _oui_cache is None:
-        _oui_cache = dict(OUI)
-        path = os.environ.get("IOTAUDIT_OUI")
-        if path and os.path.exists(path):
-            with open(path, encoding="utf-8", errors="replace") as fh:
-                for line in fh:
-                    if "(hex)" in line:
-                        hexp, _, org = line.partition("(hex)")
-                        key = normalize_mac(hexp.strip() + ":00:00:00")
-                        if key:
-                            _oui_cache[key[:8]] = org.strip()
-    # Locally Administered Address bit (2nd LSB of first octet) => randomized / private MAC
+    # Locally Administered Address bit => typically phone/laptop randomized MAC
     if int(norm[0:2], 16) & 0x02:
-        return "Randomized MAC"
+        return "random (phone/laptop)"
+    if _oui_cache is None:
+        _oui_cache = _load_oui()
     return _oui_cache.get(norm[:8])
 
 
