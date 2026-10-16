@@ -23,11 +23,4 @@ jobs:
           python -m build
           python -m venv /tmp/iotaudit-ci
           /tmp/iotaudit-ci/bin/pip install dist/*.whl
-          /tmp/iotaudit-ci/bin/python -c "
-from importlib.resources import files
-from iotaudit.enrich import mac_vendor
-assert files('iotaudit').joinpath('data/oui.txt.gz').is_file()
-assert mac_vendor('70:87:9e:00:00:01')
-assert mac_vendor('00:03:93:00:00:01') == 'Apple'
-print('wheel install + OUI OK')
-"
+          /tmp/iotaudit-ci/bin/python scripts/verify_wheel_install.py
