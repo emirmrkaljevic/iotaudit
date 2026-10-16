@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .capture import Collector
-from .enrich import Geo, is_tracker, mac_vendor, org_for
+from .enrich import PORT_LABELS, Geo, asn_org, is_tracker, mac_vendor, org_for
 from .grading import findings_for, grade
 from .models import Destination, Device
 from .profiles import is_expected, load_profiles, match_profile
@@ -17,37 +17,56 @@ def build_devices(col: Collector, geo: Geo | None = None, extra_profiles: str | 
     profiles = load_profiles(extra_profiles)
     devices: dict[str, Device] = {}
     for f in col.flows.values():
-        dev = devices.setdefault(f.src, Device(ip=f.src, mac=col.macs.get(f.src)))
-        dest = dev.destinations.setdefault(f.dst, Destination(ip=f.dst))
-        dest.ports.add(f.dport)
-        dest.bytes_out += f.bytes
+        dest = devices.setdefault(f.src, Device(ip=f.src, mac=col.macs.get(f.src)))
+        d = dest.destinations.setdefault(f.dst, Destination(ip=f.dst))
+        d.ports.add(f.dport)
+        d.bytes_out += f.bytes
         names = set(col.dns.get(f.dst, set()))
         if f.sni:
             names.add(f.sni.lower())
         if f.http_host:
             names.add(f.http_host.split(":")[0].lower())
-        dest.domains |= names
+        d.domains |= names
         if f.plaintext_http or (not f.tls and f.proto == "tcp" and f.dport not in ENCRYPTED_PORTS):
-            dest.encrypted = False
+            d.encrypted = False
         if f.tls_version in ("TLS1.0", "TLS1.1"):
-            dev.__dict__.setdefault("_old_tls", []).append(
+            dest.__dict__.setdefault("_old_tls", []).append(
                 f"{f.tls_version} used to {f.sni or f.dst}.")
     for ip, qs in col.queries.items():
         if ip in devices:
             devices[ip].dns_queries |= qs
-    for dev in devices.values():
-        dev.vendor = mac_vendor(dev.mac)
-        prof = match_profile(dev, profiles)
-        dev.profile = prof.get("name") if prof else None
-        for d in dev.destinations.values():
+    for dest in devices.values():
+        dest.vendor = mac_vendor(dest.mac)
+        for d in dest.destinations.values():
             d.country = geo.country(d.ip)
             d.org = org_for(d.domains)
+            if not d.org:
+                _asn, org = asn_org(d.ip)
+                if org:
+                    d.org = org
+            for port in d.ports:
+                if port in PORT_LABELS:
+                    d.protocols.add(PORT_LABELS[port])
             d.tracker = is_tracker(d.domains)
+        prof = match_profile(dest, profiles)
+        if not prof:
+            # No DNS/SNI: Tuya feeders often only show MQTT-TLS :8883 to AWS
+            ports = {p for d in dest.destinations.values() for p in d.ports}
+            orgs = {d.org or "" for d in dest.destinations.values()}
+            vendor = (dest.vendor or "").lower()
+            tuya_oui = any(k in vendor for k in ("tuya", "espressif", "da xia long que", "bilian"))
+            if 8883 in ports and (any(("Amazon" in o or "AWS" in o) for o in orgs) or tuya_oui):
+                if tuya_oui:
+                    prof = next((p for p in profiles if p.get("id") == "imipaw-pettech-feeder"), None)
+                if not prof:
+                    prof = next((p for p in profiles if p.get("id") == "tuya-generic"), None)
+        dest.profile = prof.get("name") if prof else None
+        for d in dest.destinations.values():
             d.expected = is_expected(d.domains, prof)
-        if scans and dev.ip in scans:
-            dev.open_ports = scans[dev.ip]
-        dev.findings = findings_for(dev)
-        dev.score, dev.grade = grade(dev.findings)
+        if scans and dest.ip in scans:
+            dest.open_ports = scans[dest.ip]
+        dest.findings = findings_for(dest)
+        dest.score, dest.grade = grade(dest.findings)
     return sorted(devices.values(), key=lambda d: d.ip)
 
 
@@ -59,7 +78,7 @@ def to_dict(dev: Device) -> dict:
         "destinations": [
             {"ip": d.ip, "domains": sorted(d.domains), "country": d.country, "org": d.org,
              "ports": sorted(d.ports), "bytes_out": d.bytes_out, "encrypted": d.encrypted,
-             "tracker": d.tracker, "expected": d.expected}
+             "tracker": d.tracker, "expected": d.expected, "protocols": sorted(d.protocols)}
             for d in sorted(dev.destinations.values(), key=lambda x: -x.bytes_out)
         ],
     }

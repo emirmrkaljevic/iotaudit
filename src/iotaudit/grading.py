@@ -9,6 +9,18 @@ GRADES = [(90, "A"), (75, "B"), (60, "C"), (45, "D"), (30, "E"), (0, "F")]
 
 def findings_for(device) -> list[dict]:
     f: list[dict] = []
+    dests = list(device.destinations.values())
+    named = sum(1 for d in dests if d.domains)
+    if dests and named == 0:
+        f.append({"severity": "info", "title": "Limited visibility (no DNS/SNI seen)",
+                  "detail": "Only IP destinations were observed. Grade reflects limited data, "
+                            "not a clean bill of health. Capture longer or trigger the app once.",
+                  "category": "coverage", "confidence": "certain"})
+    if not dests and not device.open_ports:
+        f.append({"severity": "info", "title": "Limited data — almost no traffic",
+                  "detail": "Very little was observed. Do not treat the grade as conclusive.",
+                  "category": "coverage", "confidence": "certain"})
+
     for d in device.destinations.values():
         label = ", ".join(sorted(d.domains)) or d.ip
         if not d.encrypted:
@@ -49,6 +61,11 @@ def grade(findings: list[dict]) -> tuple[int, str]:
     score = 100
     for x in findings:
         score -= PENALTY.get(x["severity"], 0)
+    limited = any(x.get("category") == "coverage" for x in findings)
+    if limited:
+        score = min(score, 70)  # never above C when coverage is thin
     score = max(score, 0)
     letter = next(g for t, g in GRADES if score >= t)
+    if limited and letter == "A":
+        letter = "C"
     return score, letter

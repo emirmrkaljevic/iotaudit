@@ -11,6 +11,7 @@ import socket
 import subprocess
 
 from .enrich import is_likely_iot, mac_vendor, normalize_mac
+from .identify import identify_network
 
 
 def _is_multicast(ip: str) -> bool:
@@ -226,23 +227,24 @@ def arp_sweep(cidr: str | None = None, iface: str | None = None, timeout: int = 
             "ip": ip, "mac": mac, "vendor": vendor, "hostname": _reverse_dns(ip),
             "role": role, "likely_iot": is_likely_iot(vendor),
         })
-    return devices
+    try:
+        return identify_network(devices)
+    except Exception:
+        return devices
 
 
 def format_table(devices: list[dict]) -> str:
-    lines = [f"{'#':>2}  {'IP':<16}{'MAC':<19}{'Vendor':<36}Note"]
+    lines = [f"{'#':>2}  {'IP':<15} {'Looks like':<42} {'Conf':<7} MAC"]
     for i, d in enumerate(devices, 1):
-        vendor = d.get("vendor") or ""
-        notes = []
+        looks = d.get("looks_like") or d.get("vendor") or "Unknown device"
+        conf = d.get("id_confidence") or ""
         if d.get("role") == "router":
-            notes.append("router/gateway")
+            looks = "Router / gateway"
+            conf = "certain"
         elif d.get("role") == "this-host":
-            notes.append("this Mac/PC")
-        if d.get("likely_iot"):
-            notes.append("likely IoT")
-        if d.get("hostname"):
-            notes.append(d["hostname"])
-        lines.append(f"{i:>2}  {d['ip']:<16}{d['mac']:<19}{vendor:<36}{', '.join(notes)}")
+            looks = "This Mac / PC"
+            conf = "certain"
+        lines.append(f"{i:>2}  {d['ip']:<15} {looks:<42} {conf:<7} {d.get('mac') or ''}")
     return "\n".join(lines)
 
 

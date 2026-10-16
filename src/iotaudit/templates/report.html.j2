@@ -34,7 +34,7 @@ All data was processed locally.</p>
   {% for x in d.destinations %}<tr>
     <td>{{ x.domains|join(", ") or "&mdash;"|safe }}{% if x.tracker %} <span class="tag">tracker</span>{% endif %}{% if x.expected == False %} <span class="tag">unexpected</span>{% endif %}</td>
     <td>{{ x.ip }}</td><td>{{ x.country or "?" }}</td><td>{{ x.org or "?" }}</td>
-    <td>{{ x.ports|join(", ") }}</td><td>{{ x.bytes_out }}</td>
+    <td>{{ x.ports|join(", ") }}{% if x.protocols %} ({{ x.protocols|join(", ") }}){% endif %}</td><td>{{ x.bytes_out }}</td>
     <td>{% if x.encrypted %}yes{% else %}<span class="high">NO</span>{% endif %}</td></tr>{% endfor %}
   </table>
   {% if d.open_ports %}<h3>Open ports (LAN)</h3>

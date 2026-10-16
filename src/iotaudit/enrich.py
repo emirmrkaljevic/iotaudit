@@ -145,23 +145,104 @@ def mac_vendor(mac: str | None) -> str | None:
     return _oui_cache.get(norm[:8])
 
 
+
+def _bundled_mmdb() -> str | None:
+    try:
+        from importlib import resources
+        p = resources.files("iotaudit") / "data" / "dbip-country-lite.mmdb"
+        return str(p) if p.is_file() else None
+    except (FileNotFoundError, ModuleNotFoundError, TypeError, AttributeError):
+        return None
+
+
 class Geo:
-    """Country lookup using a local GeoLite2/DB-IP country .mmdb (set IOTAUDIT_GEOIP or --geoip)."""
+    """Country lookup. Uses --geoip / IOTAUDIT_GEOIP, else the bundled DB-IP Lite country DB."""
 
     def __init__(self, path: str | None = None):
         self.reader = None
-        path = path or os.environ.get("IOTAUDIT_GEOIP")
+        path = path or os.environ.get("IOTAUDIT_GEOIP") or _bundled_mmdb()
         if path and os.path.exists(path):
             try:
                 import maxminddb
-
                 self.reader = maxminddb.open_database(path)
-            except ImportError:
-                self.reader = None
+            except Exception:  # noqa: BLE001 — missing maxminddb or bad file
+                try:
+                    # DB-IP / MaxMind readers via maxminddb only; soft-fail
+                    self.reader = None
+                except Exception:  # noqa: BLE001
+                    self.reader = None
 
     def country(self, ip: str) -> str | None:
         if not self.reader:
             return None
-        rec = self.reader.get(ip) or {}
+        try:
+            rec = self.reader.get(ip) or {}
+        except Exception:  # noqa: BLE001
+            return None
+        if isinstance(rec, str):  # some DB-IP country DBs return bare ISO code
+            return rec
         c = rec.get("country") or rec.get("registered_country") or {}
-        return c.get("iso_code")
+        if isinstance(c, dict):
+            return c.get("iso_code") or c.get("names", {}).get("en")
+        return None
+
+
+_asn_rows: list[tuple[int, int, int, str]] | None = None
+
+
+def _load_asn():
+    global _asn_rows
+    if _asn_rows is not None:
+        return _asn_rows
+    import gzip
+    import ipaddress
+    from importlib import resources
+    rows: list[tuple[int, int, int, str]] = []
+    try:
+        raw = (resources.files("iotaudit") / "data" / "ip2asn-lite.tsv.gz").read_bytes()
+        for line in gzip.decompress(raw).decode().splitlines():
+            start, end, asn, org = line.split("	", 3)
+            rows.append((int(ipaddress.ip_address(start)), int(ipaddress.ip_address(end)),
+                         int(asn), org))
+        rows.sort()
+    except Exception:  # noqa: BLE001
+        rows = []
+    _asn_rows = rows
+    return rows
+
+
+def asn_org(ip: str) -> tuple[int | None, str | None]:
+    """Return (asn, org) from the bundled ip2asn-lite table (cloud/IoT ASNs)."""
+    import bisect
+    import ipaddress
+    try:
+        n = int(ipaddress.ip_address(ip))
+    except ValueError:
+        return None, None
+    rows = _load_asn()
+    if not rows:
+        return None, None
+    starts = [r[0] for r in rows]
+    i = bisect.bisect_right(starts, n) - 1
+    if i >= 0 and rows[i][0] <= n <= rows[i][1]:
+        return rows[i][2], rows[i][3]
+    # linear fallback near ends
+    for start, end, asn, org in rows:
+        if start <= n <= end:
+            return asn, org
+    return None, None
+
+
+# Well-known destination ports -> protocol label
+PORT_LABELS = {
+    8883: "MQTT-over-TLS",
+    1883: "MQTT",
+    443: "HTTPS",
+    80: "HTTP",
+    853: "DNS-over-TLS",
+    993: "IMAPS",
+    123: "NTP",
+    53: "DNS",
+    6668: "Tuya-LAN",
+    8053: "Xiaomi-miIO",
+}

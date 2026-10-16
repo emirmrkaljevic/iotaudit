@@ -1,4 +1,8 @@
-oui.txt.gz is derived from the IEEE MA-L public OUI listing
-(https://standards-oui.ieee.org/oui/oui.txt), trimmed to prefix + short
-organisation name. IEEE owns the assignment data; this redistribution is
-for offline vendor identification only.
+Data files bundled with iotaudit:
+
+- oui.txt.gz — derived from the IEEE MA-L public OUI listing
+  (https://standards-oui.ieee.org/oui/oui.txt), trimmed to prefix + short name.
+- dbip-country-lite.mmdb — DB-IP IP to Country Lite, © db-ip.com,
+  licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+  Attribution: IP Geolocation by DB-IP (https://db-ip.com).
+- ip2asn-lite.tsv.gz — subset of iptoasn.com ip2asn-v4 data for common cloud/IoT ASNs.
