@@ -98,3 +98,20 @@ def test_imipaw_profile_loads():
 
     ids = {p["id"] for p in load_profiles()}
     assert "imipaw-pettech-feeder" in ids
+
+
+def test_discover_format_and_pick():
+    import io
+
+    from iotaudit.discover import format_table, pick
+
+    devs = [
+        {"ip": "192.168.1.1", "mac": "aa:bb:cc:dd:ee:ff", "vendor": "Ubiquiti", "hostname": "router"},
+        {"ip": "192.168.1.50", "mac": "d8:1f:12:00:00:01", "vendor": "Tuya Smart", "hostname": None},
+    ]
+    t = format_table(devs)
+    assert "likely IoT" in t and "192.168.1.50" in t
+    assert pick(devs, io.StringIO("2\n"), io.StringIO())["ip"] == "192.168.1.50"
+    assert pick(devs, io.StringIO("q\n"), io.StringIO()) is None
+    assert pick(devs, io.StringIO("9\n"), io.StringIO()) is None
+    assert pick([], io.StringIO("1\n"), io.StringIO()) is None
