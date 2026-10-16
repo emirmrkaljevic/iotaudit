@@ -49,18 +49,17 @@ def build_devices(col: Collector, geo: Geo | None = None, extra_profiles: str | 
                     d.protocols.add(PORT_LABELS[port])
             d.tracker = is_tracker(d.domains)
         prof = match_profile(dest, profiles)
+        soft_hint = None
         if not prof:
-            # No DNS/SNI: Tuya feeders often only show MQTT-TLS :8883 to AWS
+            # AWS+8883 alone is weak — do NOT lock a Tuya/Imipaw profile on that.
             ports = {p for d in dest.destinations.values() for p in d.ports}
             orgs = {d.org or "" for d in dest.destinations.values()}
-            vendor = (dest.vendor or "").lower()
-            tuya_oui = any(k in vendor for k in ("tuya", "espressif", "da xia long que", "bilian"))
-            if 8883 in ports and (any(("Amazon" in o or "AWS" in o) for o in orgs) or tuya_oui):
-                if tuya_oui:
-                    prof = next((p for p in profiles if p.get("id") == "imipaw-pettech-feeder"), None)
-                if not prof:
-                    prof = next((p for p in profiles if p.get("id") == "tuya-generic"), None)
+            aws_mqtt = 8883 in ports and any(("Amazon" in o or "AWS" in o) for o in orgs)
+            if aws_mqtt:
+                soft_hint = ("MQTT cloud device, possibly Tuya (AWS :8883, no DNS/SNI)", "low")
         dest.profile = prof.get("name") if prof else None
+        if soft_hint and not dest.profile:
+            dest.__dict__["_soft_hint"] = soft_hint
         for d in dest.destinations.values():
             d.expected = is_expected(d.domains, prof)
         if scans and dest.ip in scans:

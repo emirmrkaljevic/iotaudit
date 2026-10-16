@@ -11,6 +11,7 @@ assert mac_vendor("48:87:2d:1f:32:c2")
 asn, org = asn_org("3.70.12.148")
 assert asn == 16509 and org and "Amazon" in org, (asn, org)
 assert Geo().country("3.70.12.148"), "country lookup failed"
+# OUI alone must not invent Imipaw
 info = identify_device("192.168.0.2", mac="48:87:2d:1f:32:c2")
-assert "Imipaw" in info["looks_like"] or "Tuya" in info["looks_like"], info
+assert "Imipaw" not in info["looks_like"] and info["confidence"] == "low"
 print("wheel install + OUI/ASN/geo/identify OK")

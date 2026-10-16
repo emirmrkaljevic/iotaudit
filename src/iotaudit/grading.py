@@ -16,6 +16,12 @@ def findings_for(device) -> list[dict]:
                   "detail": "Only IP destinations were observed. Grade reflects limited data, "
                             "not a clean bill of health. Capture longer or trigger the app once.",
                   "category": "coverage", "confidence": "certain"})
+    hint = getattr(device, "_soft_hint", None)
+    if hint:
+        f.append({"severity": "info", "title": hint[0], "detail":
+                  "Inferred only from MQTT-over-TLS to a cloud ASN with no DNS/SNI. "
+                  "Not a confirmed vendor match.",
+                  "category": "destination", "confidence": hint[1]})
     if not dests and not device.open_ports:
         f.append({"severity": "info", "title": "Limited data — almost no traffic",
                   "detail": "Very little was observed. Do not treat the grade as conclusive.",
