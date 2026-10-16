@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "iotaudit"
+version = "0.0.1"
+description = "Audit your own smart-home devices: who they talk to, plaintext vs TLS, open ports, and an A-F grade with an HTML report."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "emirmrkaljevic" }]
+keywords = ["iot", "security", "privacy", "audit", "smart-home", "mcp", "network"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: Security",
+  "Topic :: System :: Networking :: Monitoring",
+]
+dependencies = ["scapy>=2.5", "jinja2>=3.1", "pyyaml>=6.0"]
+
+[project.optional-dependencies]
+geo = ["maxminddb>=2.4"]
+mcp = ["mcp>=1.2"]
+dev = ["pytest>=7", "ruff>=0.5"]
+
+[project.scripts]
+iotaudit = "iotaudit.cli:main"
+iotaudit-mcp = "iotaudit.mcp_server:main"
+
+[project.urls]
+Homepage = "https://github.com/emirmrkaljevic/iotaudit"
+Issues = "https://github.com/emirmrkaljevic/iotaudit/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/iotaudit"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
