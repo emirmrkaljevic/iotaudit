@@ -41,16 +41,26 @@ def cmd_capture(args) -> int:
         print("Consent not given; aborting.", file=sys.stderr)
         return 2
     iface = args.iface
+    chosen = None
+    lan_devices = []
     if not args.device and args.mode in ("arp", "iface"):
         from .discover import arp_sweep, pick
 
         print("Scanning the LAN for devices...", file=sys.stderr)
-        chosen = pick(arp_sweep(iface=None if args.iface == "auto" else args.iface))
+        try:
+            lan_devices = arp_sweep(iface=None if args.iface == "auto" else args.iface)
+        except Exception as e:  # noqa: BLE001
+            print(f"error: LAN discovery failed ({type(e).__name__}: {e}). "
+                  "Try naming the device with --device <ip>, or check you're on 2.4GHz Wi-Fi.",
+                  file=sys.stderr)
+            return 1
+        chosen = pick(lan_devices)
         if not chosen:
             print("No device selected; aborting.", file=sys.stderr)
             return 2
         args.device = [chosen["ip"]]
-        print(f"Auditing {chosen['ip']} ({chosen.get('vendor') or 'unknown vendor'}).",
+        print(f"Auditing {chosen['ip']} "
+              f"({chosen.get('looks_like') or chosen.get('vendor') or 'unknown'}).",
               file=sys.stderr)
     if args.mode == "hotspot":
         from . import hotspot
@@ -60,19 +70,47 @@ def cmd_capture(args) -> int:
               file=sys.stderr)
     spoofer = None
     fwd = None
+    bpf = None
     if args.mode == "arp":
         from . import arp
 
         if not args.device:
             print("ARP mode needs at least one --device (the IP to audit).", file=sys.stderr)
             return 2
+        target_ip = args.device[0]
+        # Reuse MACs from the LAN scan so sendp() never ARP-resolves L2 itself.
+        if not lan_devices:
+            from .discover import arp_sweep as _sweep
+            try:
+                lan_devices = _sweep(iface=None if args.iface == "auto" else args.iface)
+            except Exception:  # noqa: BLE001
+                lan_devices = []
+        by_ip = {d["ip"]: d for d in lan_devices}
+        target_mac = (chosen or by_ip.get(target_ip) or {}).get("mac")
+        gw_ip = args.gateway or arp.default_gateway()
+        gateway_mac = None
+        if gw_ip and gw_ip in by_ip:
+            gateway_mac = by_ip[gw_ip].get("mac")
+        else:
+            for d in lan_devices:
+                if d.get("role") == "router":
+                    gateway_mac = d.get("mac")
+                    gw_ip = gw_ip or d.get("ip")
+                    break
+        iface = arp.resolve_iface(args.iface)
         fwd = arp.IPForwarding().__enter__()
-        spoofer = arp.start(args.device[0], args.gateway, None if args.iface == "auto" else args.iface)
+        spoofer = arp.start(target_ip, gw_ip, iface,
+                            target_mac=target_mac, gateway_mac=gateway_mac)
+        bpf = f"host {target_ip}"
+    elif iface == "auto":
+        try:
+            from .arp import resolve_iface
+            iface = resolve_iface("auto")
+        except Exception:  # noqa: BLE001
+            iface = None
     col = Collector(args.device)
     try:
-        print(f"Capturing on {iface} for {args.duration}s (Ctrl+C to stop early)...",
-              file=sys.stderr)
-        live(None if iface == "auto" else iface, args.duration, col)
+        live(iface, args.duration, col, bpf_filter=bpf)
     except KeyboardInterrupt:
         pass
     finally:

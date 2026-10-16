@@ -1,24 +1,28 @@
-"""ARP mode (own network only, like IoT Inspector): ARP-spoof a single target device so its
-traffic flows through this computer, capture it, forward it, and restore ARP tables on exit.
+"""ARP mode (own network only): ARP-spoof one owned device so its traffic flows through this
+computer, capture it, forward it, and restore ARP tables on exit.
 
-Only works on a network you own/administer and only against a device you own. Requires root
-and an explicit consent step in the CLI/MCP layer. On macOS it also toggles IP forwarding
-(net.inet.ip.forwarding) so the target keeps working, and restores it afterwards.
+Uses sendp() with an explicit Ether(dst=<known MAC>) so scapy never ARP-resolves L2 itself
+(which on macOS produced 'MAC address to reach destination not found. Using broadcast.' and
+empty captures). MACs should come from the LAN scan; getmacbyip is only a last resort.
 """
 
 from __future__ import annotations
 
 import ipaddress
+import logging
+import os
 import platform
 import subprocess
 import sys
 import threading
 import time
+import warnings
+
+from .enrich import normalize_mac
 
 
 class IPForwarding:
-    """Enable OS IP forwarding so the spoofed device keeps internet access; restore the prior
-    value on exit. Supports macOS (sysctl net.inet.ip.forwarding) and Linux (ip_forward)."""
+    """Enable OS IP forwarding; restore the prior value on exit."""
 
     KEYS = {"Darwin": "net.inet.ip.forwarding", "Linux": "net.ipv4.ip_forward"}
 
@@ -35,6 +39,13 @@ class IPForwarding:
             raise RuntimeError("IP forwarding toggle is only supported on macOS and Linux.")
         self.prev = self._get()
         subprocess.run(["sysctl", "-w", f"{self.key}=1"], capture_output=True, text=True, check=False)
+        now = self._get()
+        if now != "1":
+            raise RuntimeError(
+                f"Could not enable IP forwarding ({self.key}={now!r}). "
+                "ARP mode needs it so the device keeps internet access. Re-run with sudo."
+            )
+        print(f"IP forwarding enabled ({self.key}=1; was {self.prev}).", file=sys.stderr)
         return self
 
     def __exit__(self, *exc):
@@ -51,7 +62,6 @@ def _require_private(*ips: str) -> None:
 
 
 def default_gateway() -> str | None:
-    """Best-effort default gateway lookup (macOS `route`, Linux `ip route`)."""
     if platform.system() == "Darwin":
         r = subprocess.run(["route", "-n", "get", "default"], capture_output=True, text=True, check=False)
         for line in r.stdout.splitlines():
@@ -65,68 +75,133 @@ def default_gateway() -> str | None:
     return None
 
 
-def _resolve_mac(ip: str, iface: str | None) -> str:
+def resolve_iface(iface: str | None = None) -> str:
+    """Turn 'auto'/None into the real interface that has the default route (e.g. en0)."""
+    if iface and iface not in ("auto", "any", "default"):
+        return iface
+    if platform.system() == "Darwin":
+        r = subprocess.run(["route", "-n", "get", "default"], capture_output=True, text=True, check=False)
+        for line in r.stdout.splitlines():
+            if line.strip().startswith("interface:"):
+                return line.split(":", 1)[1].strip()
+    try:
+        from scapy.all import conf
+
+        # conf.route.route("0.0.0.0") -> (iface, gw, ip)
+        route = conf.route.route("0.0.0.0")
+        if route and route[0]:
+            return route[0]
+    except Exception:  # noqa: BLE001
+        pass
+    if platform.system() != "Darwin":
+        r = subprocess.run(["ip", "route", "show", "default"], capture_output=True, text=True, check=False)
+        parts = r.stdout.split()
+        if "dev" in parts:
+            return parts[parts.index("dev") + 1]
+    raise RuntimeError("Could not resolve capture interface; pass --iface en0 (or your Wi-Fi iface).")
+
+
+def our_mac(iface: str) -> str:
+    """MAC address of our own interface."""
+    try:
+        from scapy.all import get_if_hwaddr
+
+        mac = normalize_mac(get_if_hwaddr(iface))
+        if mac:
+            return mac
+    except Exception:  # noqa: BLE001
+        pass
+    if platform.system() == "Darwin":
+        r = subprocess.run(["ifconfig", iface], capture_output=True, text=True, check=False)
+        for line in r.stdout.splitlines():
+            if "ether" in line:
+                mac = normalize_mac(line.split()[1])
+                if mac:
+                    return mac
+    raise RuntimeError(f"Could not read MAC of interface {iface}.")
+
+
+def _resolve_mac(ip: str, iface: str | None, known: str | None = None) -> str:
+    if known:
+        mac = normalize_mac(known)
+        if mac:
+            return mac
     from scapy.layers.l2 import getmacbyip
 
     for _ in range(3):
-        mac = getmacbyip(ip)
+        mac = normalize_mac(getmacbyip(ip) or "")
         if mac:
             return mac
-        time.sleep(0.5)
-    raise RuntimeError(f"Could not resolve MAC for {ip}. Is the device on this LAN? "
-                       "(2.4GHz, no AP/client isolation?)")
+        time.sleep(0.4)
+    raise RuntimeError(
+        f"Could not resolve MAC for {ip}. Re-run without --device so the LAN scan "
+        "caches it, or check 2.4GHz / client isolation."
+    )
+
+
+def _quiet_scapy():
+    logging.getLogger("scapy").setLevel(logging.ERROR)
+    logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
+    warnings.filterwarnings("ignore", module="scapy")
 
 
 class ArpSpoofer:
-    """Two-way ARP spoof between target and gateway. Restores both on stop()."""
+    """Two-way ARP spoof between target and gateway via sendp() + known MACs."""
 
-    def __init__(self, target_ip: str, gateway_ip: str, iface: str | None = None, interval: float = 2.0):
+    def __init__(self, target_ip: str, gateway_ip: str, iface: str,
+                 target_mac: str | None = None, gateway_mac: str | None = None,
+                 our_mac_addr: str | None = None, interval: float = 2.0):
         _require_private(target_ip, gateway_ip)
         self.target_ip = target_ip
         self.gateway_ip = gateway_ip
         self.iface = iface
         self.interval = interval
+        self._known_target_mac = target_mac
+        self._known_gateway_mac = gateway_mac
+        self.our_mac = our_mac_addr
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.target_mac: str | None = None
         self.gateway_mac: str | None = None
 
-    def _send(self, pdst, hwdst, psrc):
+    def _sendp(self, dst_mac: str, pdst: str, hwdst: str, psrc: str, hwsrc: str | None = None):
         from scapy.layers.l2 import ARP, Ether
-        from scapy.sendrecv import send
+        from scapy.sendrecv import sendp
 
-        pkt = Ether(dst=hwdst) / ARP(op=2, pdst=pdst, hwdst=hwdst, psrc=psrc)
-        send(pkt, iface=self.iface, verbose=False)
+        pkt = Ether(dst=dst_mac, src=self.our_mac) / ARP(
+            op=2, pdst=pdst, hwdst=hwdst, psrc=psrc, hwsrc=hwsrc or self.our_mac,
+        )
+        sendp(pkt, iface=self.iface, verbose=False, count=1)
 
     def _loop(self):
         while not self._stop.is_set():
-            # tell target that we are the gateway, and the gateway that we are the target
-            self._send(self.target_ip, self.target_mac, self.gateway_ip)
-            self._send(self.gateway_ip, self.gateway_mac, self.target_ip)
+            # Tell target: "I (our MAC) am the gateway"
+            self._sendp(self.target_mac, self.target_ip, self.target_mac, self.gateway_ip)
+            # Tell gateway: "I (our MAC) am the target"
+            self._sendp(self.gateway_mac, self.gateway_ip, self.gateway_mac, self.target_ip)
             self._stop.wait(self.interval)
 
     def start(self):
-        self.target_mac = _resolve_mac(self.target_ip, self.iface)
-        self.gateway_mac = _resolve_mac(self.gateway_ip, self.iface)
-        self._thread = threading.Thread(target=self._loop, daemon=True)
+        _quiet_scapy()
+        if not self.our_mac:
+            self.our_mac = our_mac(self.iface)
+        self.target_mac = _resolve_mac(self.target_ip, self.iface, self._known_target_mac)
+        self.gateway_mac = _resolve_mac(self.gateway_ip, self.iface, self._known_gateway_mac)
+        self._thread = threading.Thread(target=self._loop, name="arp-spoof", daemon=True)
         self._thread.start()
         return self
 
     def restore(self):
-        """Send correct ARP replies a few times to heal both caches."""
-        from scapy.layers.l2 import ARP
-        from scapy.sendrecv import send
-
-        if not (self.target_mac and self.gateway_mac):
+        if not (self.target_mac and self.gateway_mac and self.our_mac):
             return
-        from scapy.layers.l2 import Ether
+        _quiet_scapy()
         for _ in range(5):
-            send(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(
-                op=2, pdst=self.gateway_ip, hwdst="ff:ff:ff:ff:ff:ff",
-                psrc=self.target_ip, hwsrc=self.target_mac), iface=self.iface, verbose=False)
-            send(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(
-                op=2, pdst=self.target_ip, hwdst="ff:ff:ff:ff:ff:ff",
-                psrc=self.gateway_ip, hwsrc=self.gateway_mac), iface=self.iface, verbose=False)
+            # Correct: gateway owns gateway_ip
+            self._sendp("ff:ff:ff:ff:ff:ff", self.target_ip, "ff:ff:ff:ff:ff:ff",
+                        self.gateway_ip, hwsrc=self.gateway_mac)
+            # Correct: target owns target_ip
+            self._sendp("ff:ff:ff:ff:ff:ff", self.gateway_ip, "ff:ff:ff:ff:ff:ff",
+                        self.target_ip, hwsrc=self.target_mac)
 
     def stop(self):
         self._stop.set()
@@ -135,14 +210,22 @@ class ArpSpoofer:
         self.restore()
 
 
-def start(target_ip: str, gateway_ip: str | None = None, iface: str | None = None):
-    """Convenience: resolve gateway if needed and start spoofing. Caller must stop() and should
-    wrap capture in IPForwarding(). Raises if not run as root."""
-    if hasattr(__import__("os"), "geteuid") and __import__("os").geteuid() != 0:
+def start(target_ip: str, gateway_ip: str | None = None, iface: str | None = None,
+          target_mac: str | None = None, gateway_mac: str | None = None):
+    """Start spoofing. Returns ArpSpoofer (caller must stop()). Needs root."""
+    if hasattr(os, "geteuid") and os.geteuid() != 0:
         raise PermissionError("ARP mode needs root. Re-run with sudo.")
     gw = gateway_ip or default_gateway()
     if not gw:
         raise RuntimeError("Could not determine the default gateway; pass --gateway.")
-    print(f"ARP mode: spoofing {target_ip} <-> gateway {gw} on {iface or 'default iface'}.",
-          file=sys.stderr)
-    return ArpSpoofer(target_ip, gw, iface).start()
+    real_iface = resolve_iface(iface)
+    us = our_mac(real_iface)
+    print(
+        f"ARP mode: spoofing {target_ip} ({target_mac or '?'}) <-> "
+        f"gateway {gw} ({gateway_mac or '?'}) on {real_iface} (us {us}).",
+        file=sys.stderr,
+    )
+    return ArpSpoofer(
+        target_ip, gw, real_iface,
+        target_mac=target_mac, gateway_mac=gateway_mac, our_mac_addr=us,
+    ).start()
