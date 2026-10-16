@@ -31,6 +31,7 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
   <p class="muted">MAC {{ d.mac or "?" }} &middot; {{ d.vendor or "unknown vendor" }}
   {% if d.profile %}&middot; profile: {{ d.profile }}{% endif %} &middot; score {{ d.score }}/100</p>
   {% if d.summary %}<div class="summary"><b>Summary.</b> {{ d.summary }}</div>{% endif %}
+  {% if d.idle_upload %}<p><b>Uploads while app idle:</b> {{ d.idle_upload }}</p>{% endif %}
   {% if d.series_total %}
   <h3>Traffic over time (10s buckets)</h3>
   {% set ns = namespace(mx=1) %}
@@ -59,7 +60,7 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
     <td>{{ x.domains|join(", ") or "—" }}{% if x.tracker %} <span class="tag">tracker</span>{% endif %}</td>
     <td>{{ x.ip }}</td><td>{{ x.country or "?" }}</td><td>{{ x.org or "?" }}</td>
     <td>{{ x.ports|join(", ") }}{% if x.protocols %} ({{ x.protocols|join(", ") }}){% endif %}</td>
-    <td>{{ x.bytes_out }}</td>
+    <td>{{ x.bytes_out }} out / {{ x.bytes_in or 0 }} in</td>
     <td>{% if x.encryption_kind == "plaintext" %}<span class="high">plaintext</span>
         {% elif x.encryption_kind == "custom-encryption" %}<span class="medium">custom (unverified)</span>
         {% elif x.encryption_kind == "stun" %}STUN/TURN
@@ -75,7 +76,7 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
   <h3>LAN peers (same Wi-Fi — often phone P2P video)</h3>
   <table><tr><th>IP</th><th>Ports</th><th>Bytes</th><th>Class</th></tr>
   {% for x in d.lan_peers %}<tr>
-    <td>{{ x.ip }}</td><td>{{ x.ports|join(", ") }}</td><td>{{ x.bytes_out }}</td>
+    <td>{{ x.ip }}</td><td>{{ x.ports|join(", ") }}</td><td>{{ x.bytes_out }} out / {{ x.bytes_in or 0 }} in</td>
     <td>{% if x.traffic_class %}{{ x.traffic_class.label }}{% else %}—{% endif %}</td>
   </tr>{% endfor %}
   </table>

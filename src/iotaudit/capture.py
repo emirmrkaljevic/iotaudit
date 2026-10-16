@@ -11,7 +11,18 @@ TLS_VERSIONS = {0x0301: "TLS1.0", 0x0302: "TLS1.1", 0x0303: "TLS1.2", 0x0304: "T
 HTTP_METHODS = (b"GET ", b"POST ", b"PUT ", b"HEAD ", b"DELETE ", b"PATCH ", b"OPTIONS ")
 
 
+def is_broadcast_or_multicast(ip: str) -> bool:
+    try:
+        a = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return a.is_multicast or a.is_reserved or str(a).endswith(".255") or ip in (
+        "255.255.255.255", "0.0.0.0",
+    )
+
+
 def is_private(ip: str) -> bool:
+
     try:
         a = ipaddress.ip_address(ip)
     except ValueError:
@@ -86,36 +97,61 @@ class Collector:
             return
         ip = pkt[IP]
         if Ether in pkt and is_private(ip.src):
+            # Only learn MAC from the packet source — never from Ethernet dst
+            # (dst is often the gateway/our NIC and would mis-label the device).
             self.macs.setdefault(ip.src, pkt[Ether].src.lower())
         if DNS in pkt:
             self._dns(pkt[DNS], ip)
-        if not self._wanted(ip.src):
-            return
         l4 = pkt[TCP] if TCP in pkt else pkt[UDP] if UDP in pkt else None
         if l4 is None:
             return
         proto = "tcp" if TCP in pkt else "udp"
-        lan = is_private(ip.dst)
-        store = self.lan_flows if lan else self.flows
-        key = (ip.src, ip.dst, l4.dport, proto)
-        f = store.get(key) or Flow(ip.src, ip.dst, l4.dport, proto, lan=lan)
-        store[key] = f
-        f.packets += 1
-        f.bytes += len(ip)
         ts = float(getattr(pkt, "time", None) or _time.time())
         b = bucket_key(ts)
-        f.series[b] = f.series.get(b, 0) + len(ip)
         payload = bytes(l4.payload) if l4.payload else b""
-        if payload and len(f.payload_samples) < 8:
+
+        # Outbound from focused device
+        if self._wanted(ip.src):
+            self._account(ip.src, ip.dst, l4.dport, proto, len(ip), b, payload, outbound=True,
+                          tls_probe=True)
+        # Inbound to focused device (bytes_in)
+        elif self._wanted(ip.dst):
+            self._account(ip.dst, ip.src, l4.sport if hasattr(l4, "sport") else l4.dport,
+                          proto, len(ip), b, payload, outbound=False, tls_probe=False)
+
+    def _account(self, device_ip, peer_ip, port, proto, nbytes, bucket, payload, *,
+                 outbound: bool, tls_probe: bool) -> None:
+        from .models import Flow
+
+        broadcast = is_broadcast_or_multicast(peer_ip)
+        lan = is_private(peer_ip) or broadcast
+        if lan:
+            store = self.lan_flows
+        else:
+            store = self.flows
+        # For inbound, key by peer as "dst" from device POV still
+        key = (device_ip, peer_ip, port, proto)
+        f = store.get(key) or Flow(device_ip, peer_ip, port, proto, lan=lan)
+        store[key] = f
+        if outbound:
+            f.packets += 1
+            f.bytes += nbytes
+            f.series[bucket] = f.series.get(bucket, 0) + nbytes
+        else:
+            f.packets_in += 1
+            f.bytes_in += nbytes
+            f.__dict__.setdefault("series_in", {})
+            f.__dict__["series_in"][bucket] = f.__dict__["series_in"].get(bucket, 0) + nbytes
+        if payload and len(f.payload_samples) < 8 and outbound:
             f.payload_samples.append(payload[:512])
-        if payload and not lan:
+        if payload and tls_probe and outbound and not lan:
             ver, sni = parse_client_hello(payload)
             if ver or sni:
                 f.tls, f.tls_version, f.sni = True, ver or f.tls_version, sni or f.sni
             host = parse_http_host(payload)
             if host is not None:
                 f.plaintext_http, f.http_host = True, host or f.http_host
-            if proto == "udp" and l4.dport == 443:
+            if proto == "udp" and port == 443:
                 f.tls = True
                 f.tls_version = f.tls_version or "QUIC"
 

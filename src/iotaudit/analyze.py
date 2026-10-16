@@ -21,7 +21,9 @@ from .traffic import classify_traffic, detect_bursts, encryption_verdict, merge_
 def _apply_flow(d: Destination, f) -> None:
     d.ports.add(f.dport)
     d.bytes_out += f.bytes
+    d.bytes_in += getattr(f, "bytes_in", 0) or 0
     d.packets += f.packets
+    d.packets_in += getattr(f, "packets_in", 0) or 0
     d.lan = d.lan or f.lan
     if f.sni:
         d.domains.add(f.sni.lower())
@@ -85,11 +87,31 @@ def _enrich(d: Destination, geo: Geo, dns_map: dict) -> None:
         d.bursts = detect_bursts(d.series)
 
 
+
+def _idle_upload_verdict(device: Device) -> str:
+    """Compare low-activity baseline vs larger outbound bursts on internet destinations."""
+    series = device.series_total or {}
+    if len(series) < 3:
+        return "insufficient data"
+    rates = sorted(v * 8 / 10 for v in series.values())
+    n = max(1, len(rates) // 5)
+    baseline = sum(rates[:n]) / n
+    threshold = max(baseline * 3, 50_000)
+    spikes = [r for r in rates if r >= threshold]
+    if not spikes:
+        return "none detected"
+    wan = sum(d.bytes_out for d in device.destinations.values())
+    if wan < 100_000:
+        return "none detected (bursts were small / likely signalling; check LAN peers for video)"
+    return "detected"
+
+
 def build_devices(
     col: Collector,
     geo: Geo | None = None,
     extra_profiles: str | None = None,
     scans: dict[str, list] | None = None,
+    peer_labels: dict[str, str] | None = None,
 ) -> list[Device]:
     geo = geo or Geo()
     profiles = load_profiles(extra_profiles)
@@ -98,9 +120,20 @@ def build_devices(
     def ensure(ip: str) -> Device:
         return devices.setdefault(ip, Device(ip=ip, mac=col.macs.get(ip)))
 
+    from .capture import is_broadcast_or_multicast
+
     all_flows = list(col.flows.values()) + list(getattr(col, "lan_flows", {}).values())
     for f in all_flows:
         dest = ensure(f.src)
+        if f.lan and is_broadcast_or_multicast(f.dst):
+            # Discovery broadcasts (e.g. Tuya 255.255.255.255:6667) — not media peers
+            b = next((x for x in dest.broadcasts if x.get("ip") == f.dst and x.get("port") == f.dport), None)
+            if not b:
+                b = {"ip": f.dst, "port": f.dport, "proto": f.proto, "bytes_out": 0, "packets": 0}
+                dest.broadcasts.append(b)
+            b["bytes_out"] += f.bytes
+            b["packets"] += f.packets
+            continue
         bucket = dest.lan_peers if f.lan else dest.destinations
         d = bucket.setdefault(f.dst, Destination(ip=f.dst, lan=f.lan))
         _apply_flow(d, f)
@@ -138,9 +171,14 @@ def build_devices(
             d.expected = is_expected(d.domains, prof)
         if scans and dest.ip in scans:
             dest.open_ports = scans[dest.ip]
+        if peer_labels:
+            for ip, d in dest.lan_peers.items():
+                if ip in peer_labels:
+                    d.__dict__["looks_like"] = peer_labels[ip]
 
         dest.series_total = merge_series([d.series for d in dest.destinations.values()])
         dest.bursts = detect_bursts(dest.series_total)
+        dest.idle_upload = _idle_upload_verdict(dest)
         dest.findings = findings_for(dest)
         dest.score, dest.grade = grade(dest.findings)
         dest.summary = summarize(dest)
@@ -159,12 +197,15 @@ def _dest_dict(d: Destination) -> dict:
         }
     return {
         "ip": d.ip,
+        "looks_like": d.__dict__.get("looks_like"),
         "domains": sorted(d.domains),
         "country": d.country,
         "org": d.org,
         "ports": sorted(d.ports),
         "bytes_out": d.bytes_out,
+        "bytes_in": d.bytes_in,
         "packets": d.packets,
+        "packets_in": d.packets_in,
         "encrypted": d.encrypted,
         "encryption_kind": d.encryption_kind,
         "encryption_detail": d.encryption_detail,
@@ -188,6 +229,7 @@ def to_dict(dev: Device) -> dict:
         "grade": dev.grade,
         "score": dev.score,
         "summary": dev.summary,
+        "idle_upload": dev.idle_upload,
         "findings": dev.findings,
         "open_ports": dev.open_ports,
         "dns_queries": sorted(dev.dns_queries),
@@ -199,6 +241,7 @@ def to_dict(dev: Device) -> dict:
             _dest_dict(d)
             for d in sorted(dev.lan_peers.values(), key=lambda x: -x.bytes_out)
         ],
+        "broadcasts": dev.broadcasts,
         "series_total": {str(k): v for k, v in sorted(dev.series_total.items())},
         "bursts": dev.bursts,
     }

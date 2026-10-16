@@ -23,7 +23,9 @@ def _finish(col, args, meta) -> int:
         for ip in (args.device or []):
             print(f"Scanning {ip} with nmap...", file=sys.stderr)
             scans[ip] = nmap_scan(ip)
-    devices = [to_dict(d) for d in build_devices(col, Geo(args.geoip), args.profiles, scans)]
+    peer_labels = getattr(args, "_peer_labels", None) or {}
+    devices = [to_dict(d) for d in build_devices(
+        col, Geo(args.geoip), args.profiles, scans, peer_labels=peer_labels)]
     json_path = args.json or str(Path(args.out).with_suffix(".json"))
     Path(json_path).write_text(json.dumps(devices, indent=2))
     out = Path(args.out)
@@ -99,8 +101,24 @@ def cmd_capture(args) -> int:
                     break
         iface = arp.resolve_iface(args.iface)
         fwd = arp.IPForwarding().__enter__()
+        watch = args.watch_lan if args.watch_lan is not None else bool(chosen)
+        extra_peers = []
+        peer_labels = {}
+        if watch:
+            for d in lan_devices:
+                ip, mac = d.get("ip"), d.get("mac")
+                if not ip or not mac or ip in (target_ip, gw_ip):
+                    continue
+                if d.get("role") in ("router", "this-host"):
+                    continue
+                extra_peers.append((ip, mac))
+                peer_labels[ip] = d.get("looks_like") or d.get("vendor") or ip
+            print(f"Watch-LAN on: spoofing {len(extra_peers)} peer(s) so device↔phone "
+                  f"unicast is visible.", file=sys.stderr)
+        args._peer_labels = peer_labels
         spoofer = arp.start(target_ip, gw_ip, iface,
-                            target_mac=target_mac, gateway_mac=gateway_mac)
+                            target_mac=target_mac, gateway_mac=gateway_mac,
+                            extra_peers=extra_peers)
         bpf = f"host {target_ip}"
     elif iface == "auto":
         try:
@@ -164,6 +182,8 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--duration", type=int, default=3600,
                    help="capture seconds; Ctrl+C stops early and still writes the report")
     c.add_argument("--keep-hotspot", action="store_true")
+    c.add_argument("--watch-lan", action=argparse.BooleanOptionalAction, default=None,
+                   help="ARP-spoof target<->LAN peers for phone P2P (default on with picker)")
     c.add_argument("--i-own-this-network", action="store_true")
     common(c)
     c.set_defaults(func=cmd_capture)
