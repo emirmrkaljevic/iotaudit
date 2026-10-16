@@ -113,7 +113,8 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--json", help="also write JSON results here")
         sp.add_argument("--geoip", help="path to a GeoLite2/DB-IP country .mmdb")
         sp.add_argument("--profiles", help="extra directory of device profile YAML files")
-        sp.add_argument("--scan", action="store_true", help="nmap-scan each --device after capture")
+        sp.add_argument("--scan", action=argparse.BooleanOptionalAction, default=True,
+                       help="nmap-scan each --device after capture (default: on; --no-scan to skip)")
 
     c = sub.add_parser("capture", help="live capture (hotspot recommended)")
     c.add_argument("--mode", choices=["hotspot", "iface", "arp"], default="hotspot",

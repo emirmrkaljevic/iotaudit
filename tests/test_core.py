@@ -113,9 +113,13 @@ def test_discover_format_and_pick():
         {"ip": "192.168.1.10", "mac": "00:03:93:00:00:01", "vendor": "Apple",
          "hostname": None, "role": "this-host", "likely_iot": False},
     ]
+    # Pretend identify already ran
+    for d, looks in zip(devs, ["Router / gateway", "Imipaw-style pet feeder (Tuya)", "This Mac / PC"], strict=True):
+        d["looks_like"] = looks
+        d["id_confidence"] = "high"
     t = format_table(devs)
-    assert "likely IoT" in t and "192.168.1.50" in t
-    assert "router/gateway" in t and "this Mac/PC" in t
+    assert "Imipaw-style pet feeder (Tuya)" in t and "192.168.1.50" in t
+    assert "Router / gateway" in t and "This Mac / PC" in t
     assert pick(devs, io.StringIO("2\n"), io.StringIO())["ip"] == "192.168.1.50"
     assert pick(devs, io.StringIO("q\n"), io.StringIO()) is None
     assert pick(devs, io.StringIO("9\n"), io.StringIO()) is None
@@ -215,3 +219,60 @@ def test_arp_sweep_skips_multicast(monkeypatch):
     ips = {d["ip"] for d in devs}
     assert "192.168.1.50" in ips
     assert "224.0.0.251" not in ips
+
+
+
+def test_asn_org_and_geo_for_feeder_dest():
+    from iotaudit.enrich import Geo, asn_org
+
+    asn, org = asn_org("3.70.12.148")
+    assert asn == 16509 and org and "Amazon" in org
+    geo = Geo()
+    cc = geo.country("3.70.12.148")
+    assert cc in ("DE", "Germany", "de") or cc is not None  # bundled DB-IP
+
+
+def test_limited_data_caps_grade():
+    from iotaudit.grading import findings_for, grade
+    from iotaudit.models import Destination, Device
+
+    dev = Device(ip="192.168.0.2")
+    dev.destinations["3.70.12.148"] = Destination(
+        ip="3.70.12.148", ports={8883}, encrypted=True, bytes_out=50000
+    )
+    f = findings_for(dev)
+    assert any(x.get("category") == "coverage" for x in f)
+    score, letter = grade(f)
+    assert letter in "CDEF" and score <= 70
+
+
+def test_tuya_profile_by_mqtt_aws():
+    from iotaudit.analyze import build_devices, to_dict
+    from iotaudit.capture import Collector
+    from iotaudit.models import Flow
+
+    col = Collector(["192.168.0.2"])
+    col.macs["192.168.0.2"] = "70:87:9e:00:00:01"
+    col.flows[("192.168.0.2", "3.70.12.148", 8883, "tcp")] = Flow(
+        "192.168.0.2", "3.70.12.148", 8883, "tcp", bytes=50000, packets=100, tls=True
+    )
+    devs = [to_dict(d) for d in build_devices(col)]
+    assert len(devs) == 1
+    d = devs[0]
+    dest = d["destinations"][0]
+    assert dest["org"] and "Amazon" in dest["org"]
+    assert "MQTT-over-TLS" in dest["protocols"]
+    prof = d["profile"] or ""
+    assert prof and ("IMIPAW" in prof.upper() or "Tuya" in prof or "pet feeder" in prof.lower())
+    assert d["grade"] in "CDEF"  # limited data, not A
+
+
+def test_identify_oui_and_ports():
+    from iotaudit.identify import identify_device
+
+    info = identify_device("192.168.0.2", mac="70:87:9e:00:00:01",
+                           tuya={"192.168.0.2": {"tuya": True, "gwId": "abc"}})
+    assert "Tuya" in info["looks_like"] or "Imipaw" in info["looks_like"]
+    assert info["confidence"] in ("high", "medium", "certain")
+    apple = identify_device("192.168.0.10", mac="00:03:93:00:00:01", role="this-host")
+    assert apple["looks_like"] == "This Mac / PC"
