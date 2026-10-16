@@ -46,15 +46,21 @@ def cmd_capture(args) -> int:
         hotspot.start(args.iface, args.ssid, args.password)
         print(f"Hotspot '{args.ssid}' up on {args.iface}. Join your device to it now.",
               file=sys.stderr)
-    elif args.mode == "arp":
+    spoofer = None
+    fwd = None
+    if args.mode == "arp":
         from . import arp
 
-        arp.start()
+        if not args.device:
+            print("ARP mode needs at least one --device (the IP to audit).", file=sys.stderr)
+            return 2
+        fwd = arp.IPForwarding().__enter__()
+        spoofer = arp.start(args.device[0], args.gateway, None if args.iface == "auto" else args.iface)
     col = Collector(args.device)
     try:
         print(f"Capturing on {iface} for {args.duration}s (Ctrl+C to stop early)...",
               file=sys.stderr)
-        live(iface, args.duration, col)
+        live(None if iface == "auto" else iface, args.duration, col)
     except KeyboardInterrupt:
         pass
     finally:
@@ -62,6 +68,11 @@ def cmd_capture(args) -> int:
             from . import hotspot
 
             hotspot.stop()
+        if spoofer is not None:
+            print("Restoring ARP tables...", file=sys.stderr)
+            spoofer.stop()
+        if fwd is not None:
+            fwd.__exit__(None, None, None)
     return _finish(col, args, {"source": f"{args.mode}:{iface}", "duration": args.duration})
 
 
@@ -95,7 +106,8 @@ def build_parser() -> argparse.ArgumentParser:
     c = sub.add_parser("capture", help="live capture (hotspot recommended)")
     c.add_argument("--mode", choices=["hotspot", "iface", "arp"], default="hotspot",
                    help="hotspot: start Wi-Fi AP; iface: sniff an existing interface")
-    c.add_argument("--iface", required=True)
+    c.add_argument("--iface", default="auto", help="capture interface; 'auto' lets libpcap choose")
+    c.add_argument("--gateway", help="ARP mode: router IP (auto-detected if omitted)")
     c.add_argument("--ssid", default="iotaudit")
     c.add_argument("--password", default="auditme123")
     c.add_argument("--duration", type=int, default=600)
