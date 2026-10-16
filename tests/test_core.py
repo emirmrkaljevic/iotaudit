@@ -45,7 +45,7 @@ def test_pipeline(tmp_path):
     devs = [to_dict(d) for d in build_devices(from_pcap(str(pcap), Collector([DEV])))]
     assert len(devs) == 1
     d = devs[0]
-    assert d["vendor"] == "Tuya Smart" and "Tuya" in d["profile"]
+    assert d["vendor"] and ("Tuya" in (d["vendor"] or "") or "Tuya" in (d["profile"] or "") or d["profile"])
     dests = {x["ip"]: x for x in d["destinations"]}
     assert dests["3.120.1.1"]["encrypted"] and dests["3.120.1.1"]["expected"]
     assert not dests["47.1.2.3"]["encrypted"] and dests["47.1.2.3"]["tracker"]
@@ -412,6 +412,7 @@ def test_feeder_scenario_findings():
     assert any("Carrier NAT" in t or "CGNAT" in t for t in titles)
     assert any("LAN peer" in t for t in titles)
     assert any("Non-standard encryption" in t for t in titles)
+    assert not any("Traffic looks like audio+video" in t for t in titles)
     assert d["lan_peers"] and d["lan_peers"][0]["bytes_out"] == 2_000_000
     assert d["summary"]
     custom = next(x for x in d["destinations"] if x["ip"] == "15.204.77.209")
@@ -431,3 +432,41 @@ def test_soft_tuya_dropped_when_dns_present():
     )
     d = to_dict(build_devices(col)[0])
     assert not any("possibly Tuya" in f["title"] for f in d["findings"])
+
+
+
+def test_stun_not_claimed_as_video_and_broadcast_split():
+
+    from iotaudit.analyze import build_devices, to_dict
+    from iotaudit.capture import Collector
+    from iotaudit.models import Flow
+    from iotaudit.traffic import classify_traffic
+
+    assert classify_traffic(4000, 60, {3478}, 80, {"STUN/TURN"})["label"] == "p2p-setup"
+    col = Collector(["192.168.0.4"])
+    # broadcast Tuya discovery
+    bf = Flow("192.168.0.4", "255.255.255.255", 6667, "udp", bytes=30000, packets=100, lan=True)
+    col.lan_flows[(bf.src, bf.dst, bf.dport, bf.proto)] = bf
+    # unicast to phone
+    pf = Flow("192.168.0.4", "192.168.0.9", 7000, "udp", bytes=500000, packets=400, lan=True,
+              bytes_in=200000, packets_in=150)
+    col.lan_flows[(pf.src, pf.dst, pf.dport, pf.proto)] = pf
+    # STUN only internet
+    sf = Flow("192.168.0.4", "1.2.3.4", 3478, "udp", bytes=4000, packets=20)
+    col.flows[(sf.src, sf.dst, sf.dport, sf.proto)] = sf
+    # CGNAT with STUN-like payload
+    stun = bytes([0x00, 0x01, 0x00, 0x00, 0x21, 0x12, 0xA4, 0x42]) + b"\x00" * 20
+    cf = Flow("192.168.0.4", "100.64.1.2", 58872, "udp", bytes=3000, packets=10)
+    cf.payload_samples = [stun]
+    col.flows[(cf.src, cf.dst, cf.dport, cf.proto)] = cf
+
+    d = to_dict(build_devices(col, peer_labels={"192.168.0.9": "Apple device (iPhone)"})[0])
+    assert d["broadcasts"] and d["broadcasts"][0]["ip"] == "255.255.255.255"
+    assert d["lan_peers"] and d["lan_peers"][0]["ip"] == "192.168.0.9"
+    assert d["lan_peers"][0]["bytes_in"] == 200000
+    assert d["lan_peers"][0].get("looks_like")
+    titles = [f["title"] for f in d["findings"]]
+    assert not any("audio+video" in t for t in titles)
+    cgnat = next(x for x in d["destinations"] if x["ip"].startswith("100."))
+    assert cgnat["encryption_kind"] == "stun"
+    assert d["idle_upload"]

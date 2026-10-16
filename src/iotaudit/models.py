@@ -19,7 +19,9 @@ class Flow:
     dport: int
     proto: str
     bytes: int = 0
+    bytes_in: int = 0
     packets: int = 0
+    packets_in: int = 0
     tls: bool = False
     tls_version: str | None = None
     sni: str | None = None
@@ -60,7 +62,9 @@ class Destination:
     org: str | None = None
     ports: set[int] = field(default_factory=set)
     bytes_out: int = 0
+    bytes_in: int = 0
     packets: int = 0
+    packets_in: int = 0
     encrypted: bool = True
     encryption_kind: str | None = None  # tls / plaintext / custom-encryption / unknown
     encryption_detail: str | None = None
@@ -93,3 +97,5 @@ class Device:
     summary: str | None = None
     series_total: dict = field(default_factory=dict)
     bursts: list = field(default_factory=list)
+    idle_upload: str | None = None  # "none detected" / "detected"
+    broadcasts: list = field(default_factory=list)

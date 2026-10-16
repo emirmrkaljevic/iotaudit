@@ -64,14 +64,21 @@ def findings_for(device) -> list[dict]:
     for d in dests:
         label = ", ".join(sorted(d.domains)) or d.ip
         if d.encryption_kind == "plaintext":
-            frac = d.readable_fraction
-            frac_s = f" (~{frac:.0%} readable)" if frac is not None else ""
-            f.append({
-                "severity": "high",
-                "title": "Unencrypted traffic to the internet",
-                "detail": f"Plaintext traffic to {label} (ports {sorted(d.ports)}){frac_s}. "
-                          f"{d.encryption_detail or ''}",
-            })
+            # DNS to public resolvers is expected plaintext — covered by the DNS finding
+            if d.ports <= {53} or d.ip in PUBLIC_DNS and d.ports <= {53}:
+                pass
+            else:
+                frac = d.readable_fraction
+                frac_s = f" (~{frac:.0%} readable)" if frac is not None else ""
+                f.append({
+                    "severity": "high",
+                    "title": "Unencrypted traffic to the internet",
+                    "detail": f"Plaintext traffic to {label} (ports {sorted(d.ports)}){frac_s}. "
+                              f"{d.encryption_detail or ''}",
+                })
+        elif d.encryption_kind == "stun":
+            # Already covered by STUN/TURN finding; do not call it plaintext
+            pass
         elif d.encryption_kind == "custom-encryption":
             f.append({
                 "severity": "medium",
@@ -123,6 +130,9 @@ def findings_for(device) -> list[dict]:
                 "detail": detail,
                 "category": "traffic-class", "confidence": tc.confidence,
             })
+        elif tc and tc.label == "p2p-setup":
+            # STUN-only — do not claim media
+            pass
 
     # Hardcoded DNS also via destination list even if org enrichment named it
     for d in dests:
@@ -156,14 +166,26 @@ def findings_for(device) -> list[dict]:
             "category": "location", "confidence": "certain",
         })
 
-    lan_bytes = sum(d.bytes_out for d in device.lan_peers.values())
+    lan_bytes = sum(d.bytes_out + d.bytes_in for d in device.lan_peers.values())
     if lan_bytes:
-        peers = ", ".join(sorted(device.lan_peers)[:5])
+        peer_bits = []
+        for ip, d in list(device.lan_peers.items())[:6]:
+            tag = d.__dict__.get("looks_like") or ip
+            peer_bits.append(f"{tag} ({d.bytes_out}B out / {d.bytes_in}B in)")
         f.append({
             "severity": "info",
             "title": "LAN peer traffic (device ↔ phone/PC on your Wi-Fi)",
-            "detail": f"{lan_bytes} bytes to LAN peers ({peers}). Live video often stays "
-                      "on the LAN via P2P and will show here rather than as cloud upload.",
+            "detail": f"{lan_bytes} bytes unicast on LAN: " + "; ".join(peer_bits) + ". "
+                      "Live video often stays here via P2P rather than as cloud upload. "
+                      "Broadcasts (e.g. Tuya :6667) are listed separately.",
+            "category": "traffic-class", "confidence": "certain",
+        })
+    if getattr(device, "broadcasts", None):
+        total = sum(b.get("bytes_out", 0) for b in device.broadcasts)
+        f.append({
+            "severity": "info",
+            "title": "LAN discovery broadcasts",
+            "detail": f"{total} bytes of broadcast/multicast (e.g. Tuya UDP 6667) — not media.",
             "category": "traffic-class", "confidence": "certain",
         })
 
@@ -218,6 +240,8 @@ def summarize(device) -> str:
     if lan:
         bits.append(f"LAN peer traffic {lan} bytes vs internet {wan} bytes "
                     "(video may have stayed on Wi-Fi).")
+    if device.idle_upload:
+        bits.append(f"Uploads while app idle: {device.idle_upload}.")
     if device.bursts:
         active = sum(1 for b in device.bursts if b["kind"] == "active")
         bits.append(f"Traffic pattern: {active} active burst(s) detected.")
