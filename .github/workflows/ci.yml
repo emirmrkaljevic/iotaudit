@@ -17,3 +17,17 @@ jobs:
       - run: pip install -e ".[dev,mcp]"
       - run: ruff check src tests
       - run: pytest -q
+      - name: Build wheel and verify install
+        run: |
+          pip install build
+          python -m build
+          python -m venv /tmp/iotaudit-ci
+          /tmp/iotaudit-ci/bin/pip install dist/*.whl
+          /tmp/iotaudit-ci/bin/python -c "
+from importlib.resources import files
+from iotaudit.enrich import mac_vendor
+assert files('iotaudit').joinpath('data/oui.txt.gz').is_file()
+assert mac_vendor('48:87:2d:1f:32:c2')
+assert mac_vendor('24:2a:ea:04:c8:59') == 'Apple'
+print('wheel install + OUI OK')
+"
