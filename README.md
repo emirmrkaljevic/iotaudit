@@ -41,7 +41,21 @@ sudo iotaudit capture --mode hotspot --iface wlan0 --ssid iotaudit --password 'c
 
 Use the companion app normally (feed, stream, update) during the capture, then leave the device idle.
 
-**1b. ARP mode (macOS or Linux, own network only).** No hotspot, no re-pairing: iotaudit
+**Simplest flow (macOS or Linux, own network only): just run it.** With no `--device`, iotaudit
+scans your LAN, lists the devices it finds (IP, MAC, vendor, hostname; Tuya/Espressif are flagged
+as likely IoT), and lets you pick one by number. Then it captures **passively** - you do not have
+to touch the app. Press Ctrl+C any time to stop early; the report is still written.
+
+```bash
+sudo iotaudit capture --mode arp --i-own-this-network
+# -> pick the feeder from the numbered list; capture runs up to 1 hour (Ctrl+C to stop)
+```
+
+The report lands at `./iotaudit-report.html` with `./iotaudit-report.json` next to it. Interacting
+with the device's app during the capture gives richer data, but passive capture alone already shows
+destinations, encryption and (with `--scan`) open ports.
+
+**1b. ARP mode, naming the device explicitly.** No hotspot, no re-pairing: iotaudit
 ARP-spoofs *one* device you own so its traffic passes through your computer, then restores the
 ARP tables and IP-forwarding setting on exit.
 

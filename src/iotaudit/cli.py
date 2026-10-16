@@ -24,14 +24,15 @@ def _finish(col, args, meta) -> int:
             print(f"Scanning {ip} with nmap...", file=sys.stderr)
             scans[ip] = nmap_scan(ip)
     devices = [to_dict(d) for d in build_devices(col, Geo(args.geoip), args.profiles, scans)]
-    if args.json:
-        Path(args.json).write_text(json.dumps(devices, indent=2))
+    json_path = args.json or str(Path(args.out).with_suffix(".json"))
+    Path(json_path).write_text(json.dumps(devices, indent=2))
     out = Path(args.out)
     out.write_text(render_html(devices, meta), encoding="utf-8")
     for d in devices:
         print(f"{d['ip']:<16} grade {d['grade']}  ({len(d['destinations'])} destinations, "
               f"{len(d['findings'])} findings)")
     print(f"Report written to {out.resolve()}")
+    print(f"JSON written to {Path(json_path).resolve()}")
     return 0
 
 
@@ -40,6 +41,17 @@ def cmd_capture(args) -> int:
         print("Consent not given; aborting.", file=sys.stderr)
         return 2
     iface = args.iface
+    if not args.device and args.mode in ("arp", "iface"):
+        from .discover import arp_sweep, pick
+
+        print("Scanning the LAN for devices...", file=sys.stderr)
+        chosen = pick(arp_sweep(iface=None if args.iface == "auto" else args.iface))
+        if not chosen:
+            print("No device selected; aborting.", file=sys.stderr)
+            return 2
+        args.device = [chosen["ip"]]
+        print(f"Auditing {chosen['ip']} ({chosen.get('vendor') or 'unknown vendor'}).",
+              file=sys.stderr)
     if args.mode == "hotspot":
         from . import hotspot
 
@@ -110,7 +122,8 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--gateway", help="ARP mode: router IP (auto-detected if omitted)")
     c.add_argument("--ssid", default="iotaudit")
     c.add_argument("--password", default="auditme123")
-    c.add_argument("--duration", type=int, default=600)
+    c.add_argument("--duration", type=int, default=3600,
+                   help="capture seconds; Ctrl+C stops early and still writes the report")
     c.add_argument("--keep-hotspot", action="store_true")
     c.add_argument("--i-own-this-network", action="store_true")
     common(c)
