@@ -18,6 +18,7 @@ DOMAIN_ORGS = {
     "cloudflare.com": "Cloudflare", "ntp.org": "NTP Pool", "apple.com": "Apple",
     "icloud.com": "Apple", "facebook.com": "Meta", "doubleclick.net": "Google Ads",
     "umeng.com": "Umeng (Alibaba analytics)", "bugly.qq.com": "Tencent Bugly", "qq.com": "Tencent",
+    "iotbing.com": "iotbing (Tuya-associated cloud)",
 }
 
 TRACKERS = {
@@ -245,4 +246,21 @@ PORT_LABELS = {
     53: "DNS",
     6668: "Tuya-LAN",
     8053: "Xiaomi-miIO",
+    3478: "STUN/TURN",
+    5349: "STUN/TURN-TLS",
+    554: "RTSP",
+    8554: "RTSP",
+    1443: "custom-1443",
 }
+
+PUBLIC_DNS = {"8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9", "208.67.222.222"}
+
+
+def is_cgnat(ip: str) -> bool:
+    """RFC 6598 shared address space 100.64.0.0/10 (carrier-grade NAT / P2P peers)."""
+    try:
+        import ipaddress
+        return ipaddress.ip_address(ip) in ipaddress.ip_network("100.64.0.0/10")
+    except ValueError:
+        return False
+

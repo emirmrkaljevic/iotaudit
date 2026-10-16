@@ -1,0 +1,172 @@
+[
+  {
+    "ip": "192.168.0.4",
+    "mac": "14:5d:34:e5:9a:21",
+    "vendor": "SHENZHEN BILIAN ELECTRONIC",
+    "profile": null,
+    "grade": "D",
+    "score": 50,
+    "findings": [
+      {
+        "severity": "info",
+        "title": "MQTT cloud device, possibly Tuya (AWS :8883, no DNS/SNI)",
+        "detail": "Inferred only from MQTT-over-TLS to a cloud ASN with no DNS/SNI. Not a confirmed vendor match.",
+        "category": "destination",
+        "confidence": "low"
+      },
+      {
+        "severity": "high",
+        "title": "Unencrypted traffic to the internet",
+        "detail": "Plaintext traffic to 15.204.77.209 (ports [1443]).",
+        "confidence": "certain",
+        "category": "encryption"
+      },
+      {
+        "severity": "high",
+        "title": "Open port 23/tcp (telnet)",
+        "detail": "Telnet exposes an unencrypted login shell.",
+        "confidence": "certain",
+        "category": "port"
+      }
+    ],
+    "open_ports": [
+      {
+        "port": 23,
+        "proto": "tcp",
+        "service": "telnet",
+        "product": "BusyBox telnetd",
+        "risk": "high",
+        "why": "Telnet exposes an unencrypted login shell."
+      }
+    ],
+    "dns_queries": [
+      "a1-us.iotbing.com"
+    ],
+    "destinations": [
+      {
+        "ip": "15.204.77.209",
+        "domains": [],
+        "country": "US",
+        "org": "OVH",
+        "ports": [
+          1443
+        ],
+        "bytes_out": 18648,
+        "encrypted": false,
+        "tracker": false,
+        "expected": null,
+        "protocols": []
+      },
+      {
+        "ip": "52.42.215.72",
+        "domains": [
+          "a1-us.iotbing.com"
+        ],
+        "country": "US",
+        "org": "Amazon AWS",
+        "ports": [
+          443
+        ],
+        "bytes_out": 17668,
+        "encrypted": true,
+        "tracker": false,
+        "expected": null,
+        "protocols": [
+          "HTTPS"
+        ]
+      },
+      {
+        "ip": "52.32.71.30",
+        "domains": [],
+        "country": "US",
+        "org": "Amazon AWS",
+        "ports": [
+          8883
+        ],
+        "bytes_out": 12802,
+        "encrypted": true,
+        "tracker": false,
+        "expected": null,
+        "protocols": [
+          "MQTT-over-TLS"
+        ]
+      },
+      {
+        "ip": "51.81.153.85",
+        "domains": [],
+        "country": "US",
+        "org": "OVH",
+        "ports": [
+          3478
+        ],
+        "bytes_out": 4528,
+        "encrypted": true,
+        "tracker": false,
+        "expected": null,
+        "protocols": []
+      },
+      {
+        "ip": "100.125.228.234",
+        "domains": [],
+        "country": null,
+        "org": null,
+        "ports": [
+          52265
+        ],
+        "bytes_out": 3360,
+        "encrypted": true,
+        "tracker": false,
+        "expected": null,
+        "protocols": []
+      },
+      {
+        "ip": "35.165.227.234",
+        "domains": [
+          "a1-us.iotbing.com"
+        ],
+        "country": "US",
+        "org": "Amazon AWS",
+        "ports": [
+          443
+        ],
+        "bytes_out": 3236,
+        "encrypted": true,
+        "tracker": false,
+        "expected": null,
+        "protocols": [
+          "HTTPS"
+        ]
+      },
+      {
+        "ip": "52.27.106.179",
+        "domains": [],
+        "country": "US",
+        "org": "Amazon AWS",
+        "ports": [
+          3478
+        ],
+        "bytes_out": 640,
+        "encrypted": true,
+        "tracker": false,
+        "expected": null,
+        "protocols": []
+      },
+      {
+        "ip": "8.8.8.8",
+        "domains": [],
+        "country": "US",
+        "org": "Google",
+        "ports": [
+          53
+        ],
+        "bytes_out": 252,
+        "encrypted": true,
+        "tracker": false,
+        "expected": null,
+        "protocols": [
+          "DNS"
+        ]
+      }
+    ]
+  }
+]
