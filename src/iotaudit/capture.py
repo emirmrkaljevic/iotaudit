@@ -65,6 +65,7 @@ class Collector:
     def __init__(self, device_ips: Iterable[str] | None = None):
         self.device_ips = set(device_ips or [])
         self.flows: dict[tuple, Flow] = {}
+        self.lan_flows: dict[tuple, Flow] = {}  # device <-> LAN peers
         self.dns: dict[str, set[str]] = {}  # ip -> names (from answers)
         self.queries: dict[str, set[str]] = {}  # client ip -> queried names
         self.macs: dict[str, str] = {}
@@ -73,9 +74,13 @@ class Collector:
         return (ip in self.device_ips) if self.device_ips else is_private(ip)
 
     def add(self, pkt) -> None:  # scapy packet
+        import time as _time
+
         from scapy.layers.dns import DNS
         from scapy.layers.inet import IP, TCP, UDP
         from scapy.layers.l2 import Ether
+
+        from .traffic import bucket_key
 
         if IP not in pkt:
             return
@@ -84,19 +89,26 @@ class Collector:
             self.macs.setdefault(ip.src, pkt[Ether].src.lower())
         if DNS in pkt:
             self._dns(pkt[DNS], ip)
-        if not self._wanted(ip.src) or is_private(ip.dst):
+        if not self._wanted(ip.src):
             return
         l4 = pkt[TCP] if TCP in pkt else pkt[UDP] if UDP in pkt else None
         if l4 is None:
             return
         proto = "tcp" if TCP in pkt else "udp"
+        lan = is_private(ip.dst)
+        store = self.lan_flows if lan else self.flows
         key = (ip.src, ip.dst, l4.dport, proto)
-        f = self.flows.get(key) or Flow(ip.src, ip.dst, l4.dport, proto)
-        self.flows[key] = f
+        f = store.get(key) or Flow(ip.src, ip.dst, l4.dport, proto, lan=lan)
+        store[key] = f
         f.packets += 1
         f.bytes += len(ip)
-        payload = bytes(l4.payload)
-        if payload:
+        ts = float(getattr(pkt, "time", None) or _time.time())
+        b = bucket_key(ts)
+        f.series[b] = f.series.get(b, 0) + len(ip)
+        payload = bytes(l4.payload) if l4.payload else b""
+        if payload and len(f.payload_samples) < 8:
+            f.payload_samples.append(payload[:512])
+        if payload and not lan:
             ver, sni = parse_client_hello(payload)
             if ver or sni:
                 f.tls, f.tls_version, f.sni = True, ver or f.tls_version, sni or f.sni
@@ -104,7 +116,7 @@ class Collector:
             if host is not None:
                 f.plaintext_http, f.http_host = True, host or f.http_host
             if proto == "udp" and l4.dport == 443:
-                f.tls = True  # QUIC
+                f.tls = True
                 f.tls_version = f.tls_version or "QUIC"
 
     def _dns(self, dns, ip) -> None:

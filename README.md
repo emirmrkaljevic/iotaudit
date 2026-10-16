@@ -85,6 +85,15 @@ iotaudit analyze capture.pcap --device 192.168.1.50 --json results.json
 Countries: download a free country database (GeoLite2-Country or DB-IP Lite `.mmdb`) and pass
 `--geoip path.mmdb` or set `IOTAUDIT_GEOIP`. MAC vendors: set `IOTAUDIT_OUI` to an IEEE `oui.txt`.
 
+## What the report shows
+
+- Plain-English summary and A–F grade
+- Internet destinations (country/org) and **LAN peers** (phone P2P video often stays here)
+- Encryption: TLS, true plaintext (low entropy / readable), or *custom encryption (unverified)*
+- STUN/TURN, CGNAT peers, hardcoded public DNS
+- Traffic over time (10s buckets) with idle/active bursts
+- Device profiles (including iotbing.com / Tuya-associated clouds)
+
 ## Grading
 
 Score starts at 100; each finding subtracts points (high 25, medium 10, low 4).

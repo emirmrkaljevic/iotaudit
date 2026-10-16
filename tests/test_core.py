@@ -359,3 +359,75 @@ def test_live_progress_and_bpf(monkeypatch):
     assert calls.get("iface") == "en0"
     assert calls.get("filter") == "host 192.168.0.50"
     assert calls.get("store") is False
+
+
+
+def test_entropy_and_stun_cgnat_dns():
+    import os
+
+    from iotaudit.enrich import is_cgnat
+    from iotaudit.traffic import encryption_verdict, shannon_entropy
+
+    assert shannon_entropy(os.urandom(1000)) > 7.0
+    assert encryption_verdict([b"GET / HTTP/1.0\r\n\r\n"])["kind"] == "plaintext"
+    assert encryption_verdict([os.urandom(800)])["kind"] == "custom-encryption"
+    assert is_cgnat("100.64.0.42")
+    assert not is_cgnat("8.8.8.8")
+
+
+def test_feeder_scenario_findings():
+    """Synthetic recreation of a cloud pet-feeder capture."""
+    import os
+
+    from iotaudit.analyze import build_devices, to_dict
+    from iotaudit.capture import Collector
+    from iotaudit.models import Flow
+
+    col = Collector(["192.168.0.50"])
+    col.macs["192.168.0.50"] = "d8:1f:12:00:00:01"
+    col.queries["192.168.0.50"] = {"a1-us.iotbing.com"}
+    col.dns["52.42.215.72"] = {"a1-us.iotbing.com"}
+    specs = [
+        ("52.42.215.72", 443, 17000, True, "tcp"),
+        ("52.32.71.30", 8883, 12000, True, "tcp"),
+        ("51.81.153.85", 3478, 4000, False, "udp"),
+        ("100.64.0.42", 52265, 3000, False, "udp"),
+        ("8.8.8.8", 53, 200, False, "udp"),
+        ("15.204.77.209", 1443, 18000, False, "tcp"),
+    ]
+    for dst, port, nbytes, tls, proto in specs:
+        f = Flow("192.168.0.50", dst, port, proto, bytes=nbytes, packets=max(1, nbytes // 100), tls=tls)
+        if port == 1443:
+            f.payload_samples = [os.urandom(400)]
+        col.flows[(f.src, f.dst, f.dport, f.proto)] = f
+    lf = Flow("192.168.0.50", "192.168.0.10", 7000, "udp", bytes=2_000_000, packets=2000, lan=True)
+    col.lan_flows[(lf.src, lf.dst, lf.dport, lf.proto)] = lf
+
+    d = to_dict(build_devices(col)[0])
+    assert d["profile"] and "iotbing" in d["profile"].lower()
+    titles = [f["title"] for f in d["findings"]]
+    assert not any("possibly Tuya" in t for t in titles), titles
+    assert any("STUN/TURN" in t for t in titles)
+    assert any("Hardcoded public DNS" in t for t in titles)
+    assert any("Carrier NAT" in t or "CGNAT" in t for t in titles)
+    assert any("LAN peer" in t for t in titles)
+    assert any("Non-standard encryption" in t for t in titles)
+    assert d["lan_peers"] and d["lan_peers"][0]["bytes_out"] == 2_000_000
+    assert d["summary"]
+    custom = next(x for x in d["destinations"] if x["ip"] == "15.204.77.209")
+    assert custom["encryption_kind"] == "custom-encryption"
+
+
+def test_soft_tuya_dropped_when_dns_present():
+    from iotaudit.analyze import build_devices, to_dict
+    from iotaudit.capture import Collector
+    from iotaudit.models import Flow
+
+    col = Collector(["192.168.0.2"])
+    col.queries["192.168.0.2"] = {"a1-us.iotbing.com"}
+    col.dns["3.70.12.148"] = {"a1-us.iotbing.com"}
+    col.flows[("192.168.0.2", "3.70.12.148", 8883, "tcp")] = Flow(
+        "192.168.0.2", "3.70.12.148", 8883, "tcp", bytes=5000, packets=10, tls=True
+    )
+    d = to_dict(build_devices(col)[0])
+    assert not any("possibly Tuya" in f["title"] for f in d["findings"])

@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 CONFIDENCE_LEVELS = ("low", "medium", "high", "certain")
 CATEGORIES = (
     "encryption", "destination", "tracker", "port", "credential", "cve", "upnp", "dns",
-    "lan-scan", "firmware", "traffic-class", "new-device", "coverage",
+    "lan-scan", "firmware", "traffic-class", "new-device", "coverage", "location",
 )
 TRAFFIC_CLASSES = ("video", "audio", "audio+video", "telemetry", "firmware-download", "unknown")
 
@@ -17,7 +17,7 @@ class Flow:
     src: str
     dst: str
     dport: int
-    proto: str  # "tcp" / "udp"
+    proto: str
     bytes: int = 0
     packets: int = 0
     tls: bool = False
@@ -25,14 +25,15 @@ class Flow:
     sni: str | None = None
     plaintext_http: bool = False
     http_host: str | None = None
+    lan: bool = False  # destination is private LAN
+    series: dict = field(default_factory=dict)  # epoch_bucket -> bytes
+    payload_samples: list = field(default_factory=list)  # up to a few chunks for entropy
 
 
 @dataclass
 class Finding:
-    """One observation about a device. Inferred findings carry confidence below 'certain'."""
-
     category: str
-    severity: str  # high / medium / low / info
+    severity: str
     title: str
     detail: str
     confidence: str = "certain"
@@ -45,8 +46,6 @@ class Finding:
 
 @dataclass
 class TrafficClass:
-    """Inferred content type of traffic to one destination."""
-
     label: str = "unknown"
     confidence: str = "low"
     while_app_idle: bool | None = None
@@ -61,11 +60,18 @@ class Destination:
     org: str | None = None
     ports: set[int] = field(default_factory=set)
     bytes_out: int = 0
+    packets: int = 0
     encrypted: bool = True
+    encryption_kind: str | None = None  # tls / plaintext / custom-encryption / unknown
+    encryption_detail: str | None = None
+    readable_fraction: float | None = None
     tracker: bool = False
     expected: bool | None = None
     protocols: set[str] = field(default_factory=set)
     traffic_class: TrafficClass | None = None
+    series: dict = field(default_factory=dict)
+    bursts: list = field(default_factory=list)
+    lan: bool = False
     first_seen: float | None = None
     last_seen: float | None = None
 
@@ -78,8 +84,12 @@ class Device:
     hostname: str | None = None
     profile: str | None = None
     destinations: dict[str, Destination] = field(default_factory=dict)
+    lan_peers: dict[str, Destination] = field(default_factory=dict)
     dns_queries: set[str] = field(default_factory=set)
     open_ports: list[dict] = field(default_factory=list)
     findings: list[dict] = field(default_factory=list)
     grade: str | None = None
     score: int | None = None
+    summary: str | None = None
+    series_total: dict = field(default_factory=dict)
+    bursts: list = field(default_factory=list)

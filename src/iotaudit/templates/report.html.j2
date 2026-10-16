@@ -6,6 +6,7 @@
 body{font-family:system-ui,sans-serif;max-width:960px;margin:2rem auto;padding:0 1rem;color:#1d1d1f}
 h1{margin-bottom:.2rem}.muted{color:#666;font-size:.9rem}
 .card{border:1px solid #ddd;border-radius:10px;padding:1rem 1.2rem;margin:1.2rem 0}
+.summary{background:#f6f8fa;border-radius:8px;padding:.8rem 1rem;margin:.8rem 0}
 .grade{float:right;font-size:2.6rem;font-weight:700;width:3.6rem;height:3.6rem;line-height:3.6rem;
 text-align:center;border-radius:10px;color:#fff}
 .gA{background:#1a7f37}.gB{background:#4c9a2a}.gC{background:#c69026}.gD{background:#d4691c}
@@ -14,29 +15,71 @@ table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{border-bottom:1p
 padding:.35rem;text-align:left;vertical-align:top}
 .high{color:#b91c1c;font-weight:600}.medium{color:#c2410c}.low{color:#666}
 .tag{display:inline-block;padding:0 .4rem;border-radius:4px;font-size:.8rem;background:#eee}
+.chart{display:flex;align-items:flex-end;gap:2px;height:80px;margin:0.6rem 0}
+.chart .bar{flex:1;background:#4c9a2a;min-width:2px;border-radius:2px 2px 0 0}
+.chart .bar.active{background:#c2410c}
+.chart .bar.idle{background:#a8c5a0}
 </style></head><body>
 <h1>iotaudit report</h1>
 <p class="muted">Generated {{ generated }} &middot; iotaudit {{ version }}{% if meta.source %} &middot; source: {{ meta.source }}{% endif %}{% if meta.duration %} &middot; capture {{ meta.duration }}s{% endif %}</p>
 <p class="muted">Findings are indicators based on observed traffic, not proof of wrongdoing by any vendor.
-All data was processed locally.</p>
+All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
 {% for d in devices %}
 <div class="card">
   <div class="grade g{{ d.grade }}">{{ d.grade }}</div>
   <h2>{{ d.ip }}</h2>
   <p class="muted">MAC {{ d.mac or "?" }} &middot; {{ d.vendor or "unknown vendor" }}
   {% if d.profile %}&middot; profile: {{ d.profile }}{% endif %} &middot; score {{ d.score }}/100</p>
+  {% if d.summary %}<div class="summary"><b>Summary.</b> {{ d.summary }}</div>{% endif %}
+  {% if d.series_total %}
+  <h3>Traffic over time (10s buckets)</h3>
+  {% set ns = namespace(mx=1) %}
+  {% for k,v in d.series_total.items() %}{% if v > ns.mx %}{% set ns.mx = v %}{% endif %}{% endfor %}
+  <div class="chart" title="bytes per 10s">
+    {% for k,v in d.series_total.items() %}
+      {% set h = (v / ns.mx * 80)|int %}
+      <div class="bar" style="height:{{ h if h > 2 else 2 }}px" title="{{ k }}: {{ v }} bytes"></div>
+    {% endfor %}
+  </div>
+  {% if d.bursts %}
+  <p class="muted">Bursts:
+    {% for b in d.bursts %}
+      <span class="tag">{{ b.kind }} {{ b.bytes }}B</span>
+    {% endfor %}
+  </p>
+  {% endif %}
+  {% endif %}
   <h3>Findings</h3>
   {% if d.findings %}<ul>{% for f in d.findings %}
     <li><span class="{{ f.severity }}">[{{ f.severity }}]</span> <b>{{ f.title }}</b> &mdash; {{ f.detail }}{% if f.confidence and f.confidence != "certain" %} <span class="tag">confidence: {{ f.confidence }}</span>{% endif %}</li>
   {% endfor %}</ul>{% else %}<p>No issues observed.</p>{% endif %}
-  <h3>Destinations</h3>
-  <table><tr><th>Domain(s)</th><th>IP</th><th>Country</th><th>Organisation</th><th>Ports</th><th>Bytes out</th><th>Encrypted</th></tr>
+  <h3>Internet destinations</h3>
+  <table><tr><th>Domain(s)</th><th>IP</th><th>Country</th><th>Organisation</th><th>Ports / proto</th><th>Bytes</th><th>Encryption</th><th>Class</th></tr>
   {% for x in d.destinations %}<tr>
-    <td>{{ x.domains|join(", ") or "&mdash;"|safe }}{% if x.tracker %} <span class="tag">tracker</span>{% endif %}{% if x.expected == False %} <span class="tag">unexpected</span>{% endif %}</td>
+    <td>{{ x.domains|join(", ") or "—" }}{% if x.tracker %} <span class="tag">tracker</span>{% endif %}</td>
     <td>{{ x.ip }}</td><td>{{ x.country or "?" }}</td><td>{{ x.org or "?" }}</td>
-    <td>{{ x.ports|join(", ") }}{% if x.protocols %} ({{ x.protocols|join(", ") }}){% endif %}</td><td>{{ x.bytes_out }}</td>
-    <td>{% if x.encrypted %}yes{% else %}<span class="high">NO</span>{% endif %}</td></tr>{% endfor %}
+    <td>{{ x.ports|join(", ") }}{% if x.protocols %} ({{ x.protocols|join(", ") }}){% endif %}</td>
+    <td>{{ x.bytes_out }}</td>
+    <td>{% if x.encryption_kind == "plaintext" %}<span class="high">plaintext</span>
+        {% elif x.encryption_kind == "custom-encryption" %}<span class="medium">custom (unverified)</span>
+        {% elif x.encryption_kind == "stun" %}STUN/TURN
+        {% elif x.encrypted %}TLS/encrypted{% else %}?{% endif %}
+        {% if x.readable_fraction is not none and x.encryption_kind == "plaintext" %}
+          <span class="muted">({{ (x.readable_fraction*100)|int }}% readable)</span>
+        {% endif %}
+    </td>
+    <td>{% if x.traffic_class %}{{ x.traffic_class.label }} <span class="tag">{{ x.traffic_class.confidence }}</span>{% else %}—{% endif %}</td>
+  </tr>{% endfor %}
   </table>
+  {% if d.lan_peers %}
+  <h3>LAN peers (same Wi-Fi — often phone P2P video)</h3>
+  <table><tr><th>IP</th><th>Ports</th><th>Bytes</th><th>Class</th></tr>
+  {% for x in d.lan_peers %}<tr>
+    <td>{{ x.ip }}</td><td>{{ x.ports|join(", ") }}</td><td>{{ x.bytes_out }}</td>
+    <td>{% if x.traffic_class %}{{ x.traffic_class.label }}{% else %}—{% endif %}</td>
+  </tr>{% endfor %}
+  </table>
+  {% endif %}
   {% if d.open_ports %}<h3>Open ports (LAN)</h3>
   <table><tr><th>Port</th><th>Service</th><th>Product</th><th>Risk</th></tr>
   {% for p in d.open_ports %}<tr><td>{{ p.port }}/{{ p.proto }}</td><td>{{ p.service }}</td><td>{{ p.product }}</td>
