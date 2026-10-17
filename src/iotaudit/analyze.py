@@ -8,9 +8,11 @@ from .enrich import (
     Geo,
     asn_org,
     is_cgnat,
+    is_special_use,
     is_tracker,
     mac_vendor,
     org_for,
+    special_use_label,
 )
 from .grading import findings_for, grade, summarize
 from .models import Destination, Device, TrafficClass
@@ -75,6 +77,11 @@ def _enrich(d: Destination, geo: Geo, dns_map: dict) -> None:
     if is_cgnat(d.ip):
         d.org = d.org or "CGNAT / P2P peer"
         d.protocols.add("CGNAT-peer")
+    if is_special_use(d.ip):
+        d.__dict__["special_use"] = True
+        d.org = d.org or "special-use / bogon"
+        d.protocols.add("special-use")
+        d.__dict__.setdefault("looks_like", special_use_label(d.ip))
     d.tracker = is_tracker(d.domains)
     if d.series:
         duration = max(d.series) - min(d.series) + 10
@@ -179,6 +186,10 @@ def build_devices(
         dest.series_total = merge_series([d.series for d in dest.destinations.values()])
         dest.bursts = detect_bursts(dest.series_total)
         dest.idle_upload = _idle_upload_verdict(dest)
+        try:
+            dest.__dict__["ipv6"] = col.ipv6_summary(dest.mac)
+        except Exception:  # noqa: BLE001
+            dest.__dict__["ipv6"] = {}
         dest.findings = findings_for(dest)
         dest.score, dest.grade = grade(dest.findings)
         dest.summary = summarize(dest)
@@ -217,6 +228,7 @@ def _dest_dict(d: Destination) -> dict:
         "series": {str(k): v for k, v in sorted(d.series.items())},
         "bursts": d.bursts,
         "lan": d.lan,
+        "special_use": bool(d.__dict__.get("special_use")),
     }
 
 
@@ -244,4 +256,5 @@ def to_dict(dev: Device) -> dict:
         "broadcasts": dev.broadcasts,
         "series_total": {str(k): v for k, v in sorted(dev.series_total.items())},
         "bursts": dev.bursts,
+        "ipv6": dev.__dict__.get("ipv6", {}),
     }

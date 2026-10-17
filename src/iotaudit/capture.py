@@ -70,6 +70,28 @@ def parse_http_host(payload: bytes) -> str | None:
     return ""
 
 
+def build_bpf(target_ip: str | None, device_mac: str | None = None, ipv6: bool = True) -> str | None:
+    """BPF that captures the focused device's IPv4 *and* its IPv6 + NDP.
+
+    `ether host <mac>` grabs both address families for the device once ARP/NDP spoofing routes
+    them through us; `icmp6` additionally grabs multicast neighbor-discovery so we can tell when
+    a phone<->device stream is negotiated over IPv6 link-local even if its media never reaches us.
+    """
+    parts: list[str] = []
+    if target_ip:
+        parts.append(f"host {target_ip}")
+    from .enrich import normalize_mac
+
+    mac = normalize_mac(device_mac)
+    if mac:
+        parts.append(f"ether host {mac}")
+    if ipv6:
+        parts.append("icmp6")
+    if not parts:
+        return None
+    return " or ".join(f"({p})" for p in parts)
+
+
 class Collector:
     """Aggregates packets into flows and DNS answers."""
 
@@ -80,6 +102,11 @@ class Collector:
         self.dns: dict[str, set[str]] = {}  # ip -> names (from answers)
         self.queries: dict[str, set[str]] = {}  # client ip -> queried names
         self.macs: dict[str, str] = {}
+        # IPv6: counted separately so we can answer "did media go over IPv6?".
+        self.ipv6_flows: dict[tuple, Flow] = {}  # (src6, dst6, dport, proto) -> Flow
+        self.v6_macs: dict[str, str] = {}        # ipv6 -> MAC (for device attribution)
+        self.ndp = {"ns": 0, "na": 0, "rs": 0, "ra": 0, "redirect": 0}
+        self.ndp_neighbors: dict[str, str] = {}  # ipv6 -> MAC learned from NS/NA
 
     def _wanted(self, ip: str) -> bool:
         return (ip in self.device_ips) if self.device_ips else is_private(ip)
@@ -89,10 +116,14 @@ class Collector:
 
         from scapy.layers.dns import DNS
         from scapy.layers.inet import IP, TCP, UDP
+        from scapy.layers.inet6 import IPv6
         from scapy.layers.l2 import Ether
 
         from .traffic import bucket_key
 
+        if IPv6 in pkt:
+            self._add_v6(pkt)
+            return
         if IP not in pkt:
             return
         ip = pkt[IP]
@@ -118,6 +149,96 @@ class Collector:
         elif self._wanted(ip.dst):
             self._account(ip.dst, ip.src, l4.sport if hasattr(l4, "sport") else l4.dport,
                           proto, len(ip), b, payload, outbound=False, tls_probe=False)
+
+    def _add_v6(self, pkt) -> None:
+        """Account IPv6 unicast flows and ICMPv6 NDP (neighbor discovery) separately.
+
+        IPv6 media between two Wi-Fi clients usually rides link-local (fe80::) addresses that
+        never appear in an IPv4/ARP capture, which is a prime reason a phone<->device video
+        stream can be invisible. We count these so the report can say so honestly."""
+        import time as _time
+
+        from scapy.layers.inet import TCP, UDP
+        from scapy.layers.inet6 import (
+            ICMPv6ND_NA,
+            ICMPv6ND_NS,
+            ICMPv6ND_RA,
+            ICMPv6ND_Redirect,
+            ICMPv6ND_RS,
+            IPv6,
+        )
+        from scapy.layers.l2 import Ether
+
+        from .traffic import bucket_key
+
+        ip6 = pkt[IPv6]
+        src, dst = ip6.src, ip6.dst
+        if Ether in pkt:
+            self.v6_macs.setdefault(src, pkt[Ether].src.lower())
+        # NDP neighbour discovery (link-local control plane)
+        if ICMPv6ND_NS in pkt:
+            self.ndp["ns"] += 1
+            tgt = getattr(pkt[ICMPv6ND_NS], "tgt", None)
+            if tgt and Ether in pkt:
+                self.ndp_neighbors.setdefault(tgt, pkt[Ether].src.lower())
+        if ICMPv6ND_NA in pkt:
+            self.ndp["na"] += 1
+            tgt = getattr(pkt[ICMPv6ND_NA], "tgt", None)
+            if tgt and Ether in pkt:
+                self.ndp_neighbors.setdefault(tgt, pkt[Ether].src.lower())
+        if ICMPv6ND_RS in pkt:
+            self.ndp["rs"] += 1
+        if ICMPv6ND_RA in pkt:
+            self.ndp["ra"] += 1
+        if ICMPv6ND_Redirect in pkt:
+            self.ndp["redirect"] += 1
+        l4 = pkt[TCP] if TCP in pkt else pkt[UDP] if UDP in pkt else None
+        if l4 is None:
+            return
+        proto = "tcp" if TCP in pkt else "udp"
+        ts = float(getattr(pkt, "time", None) or _time.time())
+        b = bucket_key(ts)
+        nbytes = len(ip6)
+        payload = bytes(l4.payload) if l4.payload else b""
+        dport = int(getattr(l4, "dport", 0) or 0)
+        key = (src, dst, dport, proto)
+        f = self.ipv6_flows.get(key) or Flow(src, dst, dport, proto, lan=True)
+        self.ipv6_flows[key] = f
+        f.packets += 1
+        f.bytes += nbytes
+        f.series[b] = f.series.get(b, 0) + nbytes
+        if payload and len(f.payload_samples) < 4:
+            f.payload_samples.append(payload[:512])
+
+    def ipv6_summary(self, device_mac: str | None) -> dict:
+        """Aggregate IPv6 flows, attributing to the focused device by MAC when known."""
+        from .enrich import normalize_mac
+
+        dmac = normalize_mac(device_mac)
+        flows = list(self.ipv6_flows.values())
+        if dmac:
+            mine = [f for f in flows
+                    if normalize_mac(self.v6_macs.get(f.src)) == dmac
+                    or normalize_mac(self.v6_macs.get(f.dst)) == dmac]
+            attributed = bool(mine)
+        else:
+            mine, attributed = flows, False
+        total_bytes = sum(f.bytes for f in mine)
+        link_local = sum(
+            f.bytes for f in mine
+            if f.src.lower().startswith("fe80") or f.dst.lower().startswith("fe80")
+        )
+        peers = sorted({f.dst for f in mine} | {f.src for f in mine})
+        return {
+            "flows": len(mine),
+            "bytes": total_bytes,
+            "link_local_bytes": link_local,
+            "ndp": dict(self.ndp),
+            "neighbors": len(self.ndp_neighbors),
+            "peers": peers[:12],
+            "attributed_by_mac": attributed,
+            "any_ipv6_seen": bool(flows) or any(self.ndp.values()),
+        }
 
     def _account(self, device_ip, peer_ip, port, proto, nbytes, bucket, payload, *,
                  outbound: bool, tls_probe: bool) -> None:
