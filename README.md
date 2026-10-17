@@ -1,8 +1,11 @@
 # iotaudit
 
+<!-- mcp-name: io.github.emirmrkaljevic/iotaudit -->
+
 [![CI](https://github.com/emirmrkaljevic/iotaudit/actions/workflows/ci.yml/badge.svg)](https://github.com/emirmrkaljevic/iotaudit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![PyPI](https://img.shields.io/pypi/v/iotaudit.svg)](https://pypi.org/project/iotaudit/)
 
 <p align="center"><a href="https://skintoscan.com/#packages"><img src=".github/assets/skintoscan-support.svg" width="684" alt="Support my open-source work: get a SkinToScan pack"></a><br><sub>If you find this useful, you can support me by getting a SkinToScan pack, my other project. It's a one-time purchase that directly funds my open-source work.</sub></p>
 <p align="center"><a href="https://skintoscan.com/checkout/?add-to-cart=138"><img src=".github/assets/skintoscan-pack-1.svg" width="220" alt="Buy Single Picture Check, €4.49"></a> <a href="https://skintoscan.com/checkout/?add-to-cart=139"><img src=".github/assets/skintoscan-pack-5.svg" width="220" alt="Buy 5 Picture Pack, €19.99 (popular)"></a> <a href="https://skintoscan.com/checkout/?add-to-cart=140"><img src=".github/assets/skintoscan-pack-15.svg" width="220" alt="Buy 15 Picture Pack, €54.99"></a></p>
@@ -36,10 +39,11 @@ Open [`docs/sample-report.html`](docs/sample-report.html) in a browser for the f
 ## Install
 
 ```bash
-# from source (PyPI release prepared via Trusted Publishing, not yet live)
+pipx install iotaudit
+# or with the MCP server extra:
+pip install "iotaudit[mcp]"
+# latest from source:
 pipx install "git+https://github.com/emirmrkaljevic/iotaudit"
-# or, with the MCP server + geo extras:
-pip install "iotaudit[mcp] @ git+https://github.com/emirmrkaljevic/iotaudit"
 ```
 
 Capturing needs root (`sudo`). The optional port scan needs `nmap`.
@@ -50,7 +54,7 @@ Capturing needs root (`sudo`). The optional port scan needs `nmap`.
 
 ```bash
 brew install nmap
-pipx install "git+https://github.com/emirmrkaljevic/iotaudit"
+pipx install iotaudit
 
 # Just run it: pick your device from the list, then leave it alone (or use its app).
 sudo "$(which iotaudit)" capture --mode arp --i-own-this-network
@@ -66,7 +70,7 @@ IPv6/NDP filter are on by default.
 
 ```bash
 sudo apt install nmap
-pipx install "git+https://github.com/emirmrkaljevic/iotaudit"
+pipx install iotaudit
 
 # Same ARP flow as macOS:
 sudo "$(which iotaudit)" capture --mode arp --i-own-this-network
