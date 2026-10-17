@@ -164,6 +164,13 @@ def cmd_scan(args) -> int:
     return 0
 
 
+def cmd_mcp(args) -> int:
+    from .mcp_server import main as mcp_main
+
+    mcp_main()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="iotaudit", description="Audit your own smart-home devices.")
     p.add_argument("--version", action="version", version=__version__)
@@ -208,6 +215,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("ip")
     s.add_argument("--i-own-this-network", action="store_true")
     s.set_defaults(func=cmd_scan)
+
+    m = sub.add_parser("mcp", help="run the MCP server (stdio)")
+    m.set_defaults(func=cmd_mcp)
     return p
 
 
