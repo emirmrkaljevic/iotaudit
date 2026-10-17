@@ -1,0 +1,72 @@
+"""Generate an anonymized sample HTML report from synthetic feeder-like data that also
+exercises IPv6/NDP, the special-use bogon peer, and the honest 'media not observed'
+note. Used for docs/sample-report.html. No real personal data."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from scapy.layers.inet import UDP
+from scapy.layers.inet6 import ICMPv6ND_NA, ICMPv6ND_NS, IPv6
+from scapy.layers.l2 import Ether
+
+from iotaudit.analyze import build_devices, to_dict
+from iotaudit.capture import Collector
+from iotaudit.models import Flow
+from iotaudit.report import render_html
+
+DEV = "192.168.0.50"            # anonymized LAN IP
+DMAC = "d8:1f:12:00:00:01"      # Tuya Smart OUI, synthetic device bytes
+PMAC = "00:00:f0:00:00:02"      # Samsung OUI (phone), synthetic device bytes
+
+
+def collector() -> Collector:
+    col = Collector([DEV])
+    col.macs[DEV] = DMAC
+    col.queries[DEV] = {"a1-us.iotbing.com"}
+    col.dns["35.155.252.83"] = {"a1-us.iotbing.com"}  # real cloud IP (not personal)
+    # Internet destinations mirroring the real run (iotbing TLS, AWS MQTT, OVH custom:1443, STUN).
+    specs = [
+        ("35.155.252.83", 443, 17000, True, "tcp", None),   # iotbing / AWS (cloud, not personal)
+        ("52.32.71.30", 8883, 23000, True, "tcp", None),    # AWS MQTT
+        ("15.204.79.232", 1443, 72000, False, "tcp", b"\x9f\xd2" + bytes(range(256)) * 2),  # OVH :1443
+        ("15.204.72.48", 3478, 4000, False, "udp", None),   # OVH STUN/TURN
+    ]
+    for dst, port, nbytes, tls, proto, sample in specs:
+        f = Flow(DEV, dst, port, proto, bytes=nbytes, bytes_in=nbytes,
+                 packets=max(1, nbytes // 100), packets_in=max(1, nbytes // 100), tls=tls)
+        if sample:
+            f.payload_samples = [sample]
+        col.flows[(f.src, f.dst, f.dport, f.proto)] = f
+    # Public DNS bypassing the router.
+    col.flows[(DEV, "8.8.8.8", 53, "udp")] = Flow(DEV, "8.8.8.8", 53, "udp", bytes=200, packets=4)
+    # Tuya discovery broadcast (separate from peers).
+    bc = Flow(DEV, "255.255.255.255", 6667, "udp", bytes=48000, packets=220, lan=True)
+    col.lan_flows[(bc.src, bc.dst, bc.dport, bc.proto)] = bc
+    # The odd special-use "LAN peer" (192.0.0.0/24) from the real run.
+    bogon = Flow(DEV, "192.0.0.6", 63720, "udp", bytes=3360, packets=24, lan=True)
+    col.lan_flows[(bogon.src, bogon.dst, bogon.dport, bogon.proto)] = bogon
+    # IPv6: NDP seen between feeder and phone, but no IPv6 media captured.
+    col.add(Ether(src=DMAC) / IPv6(src="fe80::da1f:12ff:fe00:1", dst="ff02::1:ff00:2")
+            / ICMPv6ND_NS(tgt="fe80::200:f0ff:fe00:2"))
+    col.add(Ether(src=PMAC) / IPv6(src="fe80::200:f0ff:fe00:2", dst="fe80::da1f:12ff:fe00:1")
+            / ICMPv6ND_NA(tgt="fe80::200:f0ff:fe00:2"))
+    col.add(Ether(src=DMAC, dst=PMAC) / IPv6(src="fe80::da1f:12ff:fe00:1",
+            dst="fe80::200:f0ff:fe00:2") / UDP(sport=7000, dport=7001) / (b"\x00" * 120))
+    return col
+
+
+def main() -> None:
+    scans = {DEV: [{"port": 23, "proto": "tcp", "service": "telnet",
+                    "product": "BusyBox telnetd", "risk": "high",
+                    "why": "Telnet exposes an unencrypted login shell."}]}
+    devs = [to_dict(d) for d in build_devices(collector(), scans=scans)]
+    html = render_html(devs, {"source": "arp:en0 (anonymized sample)", "duration": 900})
+    out = Path(__file__).resolve().parents[1] / "docs" / "sample-report.html"
+    out.write_text(html, encoding="utf-8")
+    print("wrote", out)
+    print("findings:", [f["title"] for f in devs[0]["findings"]])
+
+
+if __name__ == "__main__":
+    main()
