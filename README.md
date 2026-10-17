@@ -111,3 +111,9 @@ network you do not own may be illegal.
 
 Findings are **indicators based on observed traffic, not proof** of wrongdoing by any vendor.
 IP geolocation by [DB-IP](https://db-ip.com). MIT licensed.
+
+## Support my work
+
+[![Get a SkinToScan pack](https://img.shields.io/badge/%E2%98%95_Support_me-Get_a_SkinToScan_pack-ff5f5f?style=for-the-badge)](https://skintoscan.com/#packages)
+
+If you find this useful, you can support me by getting a SkinToScan pack, my other project. It's a one-time purchase that directly funds my open-source work.
