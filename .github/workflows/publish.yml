@@ -1,0 +1,50 @@
+name: Publish to PyPI
+
+# Publishes to PyPI via Trusted Publishing (OIDC) when a GitHub Release is published.
+# No API tokens are stored. Set up the PyPI "pending publisher" once:
+#   PyPI project 'iotaudit' -> owner emirmrkaljevic, repo iotaudit,
+#   workflow 'publish.yml', environment 'pypi'. Requires maintainer 2FA/approval to run.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: |
+          pip install build
+          python -m build
+      - name: Verify the built wheel installs and runs
+        run: |
+          python -m venv /tmp/verify
+          /tmp/verify/bin/pip install dist/*.whl
+          /tmp/verify/bin/python scripts/verify_wheel_install.py
+          /tmp/verify/bin/iotaudit --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi            # add a required reviewer here to gate releases
+    permissions:
+      id-token: write            # OIDC token for Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

@@ -2,151 +2,112 @@
 
 [![CI](https://github.com/emirmrkaljevic/iotaudit/actions/workflows/ci.yml/badge.svg)](https://github.com/emirmrkaljevic/iotaudit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 
 **Is your smart pet feeder, camera or plug safe?** `iotaudit` watches what your own IoT devices
-do on the network and gives each one an **A–F grade** with a one-page HTML report:
+do on the network and gives each one an **A–F grade** with a one-page HTML report. Everything
+runs locally: no account, no telemetry, no cloud.
 
-- **Who it talks to** – domains (from DNS + TLS SNI + HTTP Host), IPs, country, organisation
-- **Encrypted or not** – flags plaintext HTTP / unencrypted TCP, outdated TLS 1.0/1.1
-- **Trackers** – analytics/telemetry endpoints
-- **Expected vs unexpected** – compares traffic against community **device profiles** (YAML)
-- **Open ports** – optional `nmap` scan with risk notes (telnet, RTSP, UPnP, ADB, ...)
-- **MCP server** – let your assistant run "audit my pet feeder" locally
+It answers the questions you actually have about a cheap smart device:
 
-Everything runs locally. No account, no telemetry, no cloud.
+- **Who does it talk to?** Domains (DNS + TLS SNI + HTTP Host), IPs, country, organisation.
+- **Is it encrypted?** Plaintext HTTP, unencrypted TCP, old TLS, or "custom" high-entropy protocols.
+- **What ports are open?** Optional `nmap` scan with risk notes (telnet, RTSP, UPnP, ADB, …).
+- **Does it phone home while idle?** Idle-upload check and a traffic timeline with bursts.
+- **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN — and an honest note
+  when a stream was set up but never actually passed through your computer.
 
-> Status: early (0.0.x). Hotspot capture, pcap analysis, grading, report and MCP server work;
-> CVE lookup, UPnP checks, ARP mode and idle-upload detection are on the roadmap.
+> Status: **0.1.0**. Hotspot + ARP capture, pcap analysis, IPv6/NDP, grading, HTML report and the
+> MCP server work. CVE lookup and UPnP checks are on the [roadmap](ROADMAP.md).
+
+## Sample report
+
+A report for a Tuya-associated pet feeder (anonymized). It talks to US clouds over TLS/MQTT, keeps
+**telnet open**, uses **hardcoded 8.8.8.8**, sets up a **P2P video session that was not observed**
+on this run, and shows an odd **special-use "LAN peer"** that is not a real device:
+
+![Sample iotaudit report](docs/sample-report.png)
+
+Open [`docs/sample-report.html`](docs/sample-report.html) in a browser for the full version.
 
 ## Install
 
 ```bash
-pip install git+https://github.com/emirmrkaljevic/iotaudit   # PyPI release coming soon
-pip install "iotaudit[mcp,geo] @ git+https://github.com/emirmrkaljevic/iotaudit"
-sudo apt install nmap            # optional, for --scan
+# from source (PyPI release prepared via Trusted Publishing, not yet live)
+pipx install "git+https://github.com/emirmrkaljevic/iotaudit"
+# or, with the MCP server + geo extras:
+pip install "iotaudit[mcp] @ git+https://github.com/emirmrkaljevic/iotaudit"
 ```
 
-Hotspot mode needs Linux with NetworkManager. **ARP mode and pcap analysis also work on macOS**
-(libpcap). Capturing requires root (`sudo`).
+Capturing needs root (`sudo`). The optional port scan needs `nmap`.
 
-## Quick start
+## Quickstart
 
-**1. Hotspot mode (recommended).** Your laptop becomes a Wi-Fi access point; re-pair the device to it.
-No traffic interception on anyone else's network.
+### macOS
 
 ```bash
-sudo iotaudit capture --mode hotspot --iface wlan0 --ssid iotaudit --password 'choose-a-pass' \
-     --duration 900 --device 10.42.0.50 --scan --out feeder.html
-```
-
-Use the companion app normally (feed, stream, update) during the capture, then leave the device idle.
-
-**Simplest flow (macOS or Linux, own network only): just run it.** With no `--device`, iotaudit
-scans your LAN, lists the devices it finds (IP, MAC, vendor, hostname; Tuya/Espressif are flagged
-as likely IoT), and lets you pick one by number. Then it captures **passively** - you do not have
-to touch the app. Press Ctrl+C any time to stop early; the report is still written.
-
-```bash
-sudo iotaudit capture --mode arp --i-own-this-network
-# -> pick the feeder from the numbered list; capture runs up to 1 hour (Ctrl+C to stop)
-```
-
-The report lands at `./iotaudit-report.html` with `./iotaudit-report.json` next to it. Interacting
-with the device's app during the capture gives richer data, but passive capture alone already shows
-destinations, encryption and (with `--scan`) open ports.
-
-**1b. ARP mode, naming the device explicitly.** No hotspot, no re-pairing: iotaudit
-ARP-spoofs *one* device you own so its traffic passes through your computer, then restores the
-ARP tables and IP-forwarding setting on exit.
-
-```bash
-# macOS: install first
 brew install nmap
-pipx install "git+https://github.com/emirmrkaljevic/iotaudit"   # or: pip install --user ...
+pipx install "git+https://github.com/emirmrkaljevic/iotaudit"
 
-# find the feeder's IP (look for its MAC vendor, e.g. Tuya/Espressif)
-arp -a
-
-sudo iotaudit capture --mode arp --device 192.168.1.50 --duration 900 \
-     --i-own-this-network --scan --out ~/feeder.html
+# Just run it: pick your device from the list, then leave it alone (or use its app).
+sudo "$(which iotaudit)" capture --mode arp --i-own-this-network
 ```
 
-It auto-detects your router; pass `--gateway 192.168.1.1` to override. Use the app during the
-capture, then leave the device idle.
+iotaudit scans your LAN, lists devices (IP, MAC, vendor; Tuya/Espressif flagged as likely IoT),
+and lets you pick one. It then ARP-spoofs **only that device** so its traffic flows through your
+Mac, captures for up to an hour (Ctrl+C stops early and still writes the report), and restores the
+ARP tables and IP-forwarding on exit. With a device picked, `--watch-lan` (phone P2P) and the
+IPv6/NDP filter are on by default.
 
-**2. Existing pcap** (from Wireshark, your router, OpenWrt `tcpdump`, ...):
+### Linux
 
 ```bash
-iotaudit analyze capture.pcap --device 192.168.1.50 --json results.json
+sudo apt install nmap
+pipx install "git+https://github.com/emirmrkaljevic/iotaudit"
+
+# Same ARP flow as macOS:
+sudo "$(which iotaudit)" capture --mode arp --i-own-this-network
+
+# Or hotspot mode: your laptop becomes an AP; re-pair the device to it (needs NetworkManager).
+sudo iotaudit capture --mode hotspot --iface wlan0 --ssid iotaudit --password 'choose-a-pass' \
+     --device 10.42.0.50 --scan --out feeder.html
 ```
 
-**3. Port scan only:** `iotaudit scan 192.168.1.50`
+### Analyse an existing capture
 
-Countries: download a free country database (GeoLite2-Country or DB-IP Lite `.mmdb`) and pass
-`--geoip path.mmdb` or set `IOTAUDIT_GEOIP`. MAC vendors: set `IOTAUDIT_OUI` to an IEEE `oui.txt`.
-
-## What the report shows
-
-- Plain-English summary and A–F grade
-- Internet destinations (country/org) and **LAN peers** (phone P2P video often stays here)
-- Encryption: TLS, true plaintext (low entropy / readable), or *custom encryption (unverified)*
-- STUN/TURN, CGNAT peers, hardcoded public DNS
-- Traffic over time (10s buckets) with idle/active bursts
-- Device profiles (including iotbing.com / Tuya-associated clouds)
-
-## Grading
-
-Score starts at 100; each finding subtracts points (high 25, medium 10, low 4).
-A ≥ 90, B ≥ 75, C ≥ 60, D ≥ 45, E ≥ 30, F below.
-
-## Device profiles
-
-Profiles live in [`src/iotaudit/profiles/`](src/iotaudit/profiles). Add your own with `--profiles DIR`.
-
-```yaml
-id: tuya-generic
-name: Tuya-based smart device
-match:
-  mac_vendors: ["Tuya", "Espressif"]
-  domains: ["tuyaeu.com", "tuyaus.com"]
-expected_domains: ["tuyaeu.com", "tuya.com", "ntp.org"]
-expected_ports: [443, 8883, 123]
-notes: "MQTT over TLS to the Tuya region cloud."
+```bash
+# from Wireshark, your router, or OpenWrt `tcpdump -w`
+iotaudit analyze capture.pcap --device 192.168.1.50 --json results.json --out report.html
 ```
 
-PRs with profiles for your devices are very welcome.
+The report lands at `./iotaudit-report.html` with a matching `.json` next to it.
+
+## IPv6, P2P video, and "not observed"
+
+Live video from a camera or feeder often does **not** go to the cloud — it goes **directly to your
+phone** over the local Wi-Fi (P2P), after a short STUN/TURN handshake. iotaudit tries hard to see
+that stream (`--watch-lan` spoofs device↔phone, and the capture filter now includes IPv6 and NDP),
+but two Wi-Fi clients can talk **without their traffic ever passing through your computer** —
+because of Access-Point client isolation, a phone ignoring the spoof, or the stream riding IPv6
+link-local (`fe80::`). When that happens the report says so honestly:
+
+> *Live video set up but not observed here* — the session was negotiated (STUN) but no sustained
+> stream was captured; it most likely went straight to your phone. **Not observed ≠ not happening.**
+
+For ground truth, capture at the router instead. `--ipv6-ndp` (experimental) also NDP-spoofs IPv6
+link-local pairs.
 
 ## MCP server
 
-```json
-{ "mcpServers": { "iotaudit": { "command": "iotaudit-mcp" } } }
+```bash
+iotaudit-mcp        # exposes audit tools to a local assistant ("audit my pet feeder")
 ```
 
-Tools: `analyze_pcap`, `capture`, `scan_device`. Capture and scan require explicit
-`i_own_this_network=true` confirmation.
+## Consent & scope
 
-## Legal & consent
+iotaudit only audits **your own** network. It refuses non-private targets and requires
+`--i-own-this-network` (or an interactive `I OWN THIS NETWORK` confirmation). ARP/NDP spoofing on a
+network you do not own may be illegal.
 
-- **Only use iotaudit on networks you own or administer and on devices you own** (or have written
-  permission to test). Intercepting or scanning other people's networks or devices is a criminal
-  offence in most jurisdictions (e.g. EU Directive 2013/40/EU, US CFAA).
-- Every capture/scan asks you to type a consent phrase (or pass `--i-own-this-network`).
-- Hotspot mode is the default because it does not interfere with anyone else's traffic.
-- The scanner refuses public IP addresses.
-- Captured data stays on your machine. Reports may contain personal data – share them carefully.
-- Results are **indicators based on observed traffic**, not proof of wrongdoing by any vendor.
-
-## Roadmap
-
-- CVE lookup (OSV / NVD / CISA KEV) from service banners
-- UPnP IGD port-forward check on your router
-- "Uploading while idle" heuristic for cameras
-- ARP mode (own network only, extra consent)
-- Larger tracker list and device profile library
-- PDF export, continuous mode
-
-See [ROADMAP.md](ROADMAP.md) for the full plan (traffic classification with confidence levels, phone support, CVE/UPnP/DNS checks, continuous mode).
-
-## License
-
-MIT
+Findings are **indicators based on observed traffic, not proof** of wrongdoing by any vendor.
+IP geolocation by [DB-IP](https://db-ip.com). MIT licensed.

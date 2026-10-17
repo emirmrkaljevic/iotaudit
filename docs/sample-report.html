@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iotaudit report</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:960px;margin:2rem auto;padding:0 1rem;color:#1d1d1f}
+h1{margin-bottom:.2rem}.muted{color:#666;font-size:.9rem}
+.card{border:1px solid #ddd;border-radius:10px;padding:1rem 1.2rem;margin:1.2rem 0}
+.summary{background:#f6f8fa;border-radius:8px;padding:.8rem 1rem;margin:.8rem 0}
+.grade{float:right;font-size:2.6rem;font-weight:700;width:3.6rem;height:3.6rem;line-height:3.6rem;
+text-align:center;border-radius:10px;color:#fff}
+.gA{background:#1a7f37}.gB{background:#4c9a2a}.gC{background:#c69026}.gD{background:#d4691c}
+.gE{background:#c2410c}.gF{background:#b91c1c}
+table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{border-bottom:1px solid #eee;
+padding:.35rem;text-align:left;vertical-align:top}
+.high{color:#b91c1c;font-weight:600}.medium{color:#c2410c}.low{color:#666}
+.tag{display:inline-block;padding:0 .4rem;border-radius:4px;font-size:.8rem;background:#eee}
+.chart{display:flex;align-items:flex-end;gap:2px;height:80px;margin:0.6rem 0}
+.chart .bar{flex:1;background:#4c9a2a;min-width:2px;border-radius:2px 2px 0 0}
+.chart .bar.active{background:#c2410c}
+.chart .bar.idle{background:#a8c5a0}
+</style></head><body>
+<h1>iotaudit report</h1>
+<p class="muted">Generated 2026-10-17 10:16 &middot; iotaudit 0.1.0 &middot; source: arp:en0 (anonymized sample) &middot; capture 900s</p>
+<p class="muted">Findings are indicators based on observed traffic, not proof of wrongdoing by any vendor.
+All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
+
+<div class="card">
+  <div class="grade gD">D</div>
+  <h2>192.168.0.50</h2>
+  <p class="muted">MAC 14:5d:34:00:00:01 &middot; SHENZHEN BILIAN ELECTRONIC
+  &middot; profile: iotbing.com cloud device (Tuya-associated pet feeder / camera) &middot; score 55/100</p>
+  <div class="summary"><b>Summary.</b> Device 192.168.0.50 (iotbing.com cloud device (Tuya-associated pet feeder / camera)). Grade D (55/100). Talked to: Amazon AWS, Google, OVH, iotbing (Tuya-associated cloud). Server countries observed: US. Telnet (port 23) is open on the LAN — change defaults / block it. Uses public DNS directly (bypasses your router). Used STUN/TURN (typical for P2P video setup). A P2P video session was set up but no media stream was captured here — it likely went straight to your phone over Wi-Fi (not observed). Uploads while app idle: insufficient data. 1 destination(s) look like custom/non-TLS encryption (unverified).</div>
+  <p><b>Uploads while app idle:</b> insufficient data</p>
+  <p class="muted"><b>IPv6:</b> 1 flow(s),
+  168 bytes (168 on link-local fe80::); NDP messages:
+  2
+  (NS 1, NA 1), neighbours 1.</p>
+  
+  
+  <h3>Findings</h3>
+  <ul>
+    <li><span class="medium">[medium]</span> <b>Non-standard encryption (custom protocol), unverified</b> &mdash; Traffic to 15.204.79.232 (ports [1443]) looks encrypted by entropy but is not TLS. High entropy (8.00) without TLS handshake — non-standard encryption (custom protocol), unverified. <span class="tag">confidence: medium</span></li>
+  
+    <li><span class="info">[info]</span> <b>STUN/TURN (P2P video setup)</b> &mdash; STUN/TURN to 15.204.72.48 (OVH) — typical for peer-to-peer video/audio; the media may stay on the LAN or go via a relay. <span class="tag">confidence: high</span></li>
+  
+    <li><span class="medium">[medium]</span> <b>Hardcoded public DNS (bypasses router)</b> &mdash; Device sent DNS to 8.8.8.8, bypassing your router's DNS. Queries may leave your network even if you run Pi-hole.</li>
+  
+    <li><span class="high">[high]</span> <b>Open port 23/tcp (telnet)</b> &mdash; Telnet exposes an unencrypted login shell.</li>
+  
+    <li><span class="info">[info]</span> <b>Cloud servers outside the local network</b> &mdash; Observed destination countries: US. This is a location note about servers the device contacted, not a judgement about where you live.</li>
+  
+    <li><span class="info">[info]</span> <b>Odd "LAN peer" in special-use address space</b> &mdash; Saw traffic to/from 192.0.0.6 (3360B), which is reserved / protocol-assignment space (e.g. 192.0.0.0/24), not a real device on your Wi-Fi. It is almost always a placeholder/DS-Lite address or an address carried inside P2P/STUN signalling — not a second hidden gadget. <span class="tag">confidence: high</span></li>
+  
+    <li><span class="info">[info]</span> <b>LAN discovery broadcasts</b> &mdash; 48000 bytes of broadcast/multicast (e.g. Tuya UDP 6667) — not media.</li>
+  
+    <li><span class="info">[info]</span> <b>Live video set up but not observed here</b> &mdash; The device negotiated a peer-to-peer session (STUN/TURN) but no sustained video/audio stream was captured on this run. It most likely went directly between the device and your phone over Wi-Fi (P2P) and never passed through this computer: two Wi-Fi clients can talk without their traffic crossing your Mac, and spoofed ARP/NDP may not redirect it (client isolation, or the phone ignoring the spoof). IPv6 was active (NDP messages: 2, IPv6 flows seen: 1), so the stream may be riding IPv6 link-local between the two devices. Not observed does not mean it did not happen — re-run with the app streaming, or capture at the router. <span class="tag">confidence: high</span></li>
+  
+    <li><span class="info">[info]</span> <b>IPv6 traffic observed</b> &mdash; 1 IPv6 flow(s), 168 bytes (168 on link-local fe80::); NDP neighbor-discovery messages: 2. IPv6 enrichment (country/org) is limited; link-local P2P between two Wi-Fi clients may not be fully capturable without router-side capture.</li>
+  </ul>
+  <h3>Internet destinations</h3>
+  <table><tr><th>Domain(s)</th><th>IP</th><th>Country</th><th>Organisation</th><th>Ports / proto</th><th>Bytes</th><th>Encryption</th><th>Class</th></tr>
+  <tr>
+    <td>—</td>
+    <td>15.204.79.232</td><td>US</td><td>OVH</td>
+    <td>1443 (custom-1443)</td>
+    <td>72000 out / 72000 in</td>
+    <td><span class="medium">custom (unverified)</span>
+        
+        
+    </td>
+    <td>—</td>
+  </tr><tr>
+    <td>—</td>
+    <td>52.32.71.30</td><td>US</td><td>Amazon AWS</td>
+    <td>8883 (MQTT-over-TLS)</td>
+    <td>23000 out / 23000 in</td>
+    <td>TLS/encrypted
+        
+    </td>
+    <td>—</td>
+  </tr><tr>
+    <td>a1-us.iotbing.com</td>
+    <td>35.155.252.83</td><td>US</td><td>iotbing (Tuya-associated cloud)</td>
+    <td>443 (HTTPS)</td>
+    <td>17000 out / 17000 in</td>
+    <td>TLS/encrypted
+        
+    </td>
+    <td>—</td>
+  </tr><tr>
+    <td>—</td>
+    <td>15.204.72.48</td><td>US</td><td>OVH</td>
+    <td>3478 (STUN/TURN)</td>
+    <td>4000 out / 4000 in</td>
+    <td>STUN/TURN
+        
+        
+    </td>
+    <td>—</td>
+  </tr><tr>
+    <td>—</td>
+    <td>8.8.8.8</td><td>US</td><td>Google</td>
+    <td>53 (DNS)</td>
+    <td>200 out / 0 in</td>
+    <td>TLS/encrypted
+        
+    </td>
+    <td>—</td>
+  </tr>
+  </table>
+  
+  <h3>LAN peers (same Wi-Fi — often phone P2P video)</h3>
+  <table><tr><th>IP</th><th>Ports</th><th>Bytes</th><th>Class</th></tr>
+  <tr>
+    <td>192.0.0.6 <span class="tag">special-use / not a real device</span></td>
+    <td>63720</td><td>3360 out / 0 in</td>
+    <td><span class="muted">bogon/placeholder</span></td>
+  </tr>
+  </table>
+  
+  <h3>Open ports (LAN)</h3>
+  <table><tr><th>Port</th><th>Service</th><th>Product</th><th>Risk</th></tr>
+  <tr><td>23/tcp</td><td>telnet</td><td>BusyBox telnetd</td>
+  <td class="high">high</td></tr></table>
+</div>
+
+</body></html>
