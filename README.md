@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 
+<p align="center"><a href="https://skintoscan.com/#packages"><img src="https://img.shields.io/badge/%E2%98%95_Support_me-Get_a_SkinToScan_pack-ff5f5f?style=for-the-badge" alt="Support me: get a SkinToScan pack"></a><br><sub>If you find this useful, you can support me by getting a SkinToScan pack, my other project. It's a one-time purchase that directly funds my open-source work.</sub></p>
+
 **Is your smart pet feeder, camera or plug safe?** `iotaudit` watches what your own IoT devices
 do on the network and gives each one an **A–F grade** with a one-page HTML report. Everything
 runs locally: no account, no telemetry, no cloud.
@@ -111,9 +113,3 @@ network you do not own may be illegal.
 
 Findings are **indicators based on observed traffic, not proof** of wrongdoing by any vendor.
 IP geolocation by [DB-IP](https://db-ip.com). MIT licensed.
-
-## Support my work
-
-[![Get a SkinToScan pack](https://img.shields.io/badge/%E2%98%95_Support_me-Get_a_SkinToScan_pack-ff5f5f?style=for-the-badge)](https://skintoscan.com/#packages)
-
-If you find this useful, you can support me by getting a SkinToScan pack, my other project. It's a one-time purchase that directly funds my open-source work.
