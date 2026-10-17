@@ -220,6 +220,73 @@ class ArpSpoofer:
         self.restore()
 
 
+def _ll_from_mac(mac: str) -> str | None:
+    """Derive the EUI-64 IPv6 link-local address (fe80::/64) from a MAC."""
+    try:
+        from scapy.utils6 import in6_mactoifaceid
+
+        iface_id = in6_mactoifaceid(mac).lower()
+        return "fe80::" + iface_id
+    except Exception:  # noqa: BLE001
+        return None
+
+
+class NDPSpoofer:
+    """Experimental IPv6 neighbor-discovery spoof so device<->peer link-local unicast passes
+    through us, the IPv6 analogue of ARP spoofing. Sends unsolicited Neighbor Advertisements
+    (override set) claiming our MAC for each side's link-local address. Best-effort: on a Wi-Fi
+    network with client isolation the stream may still never reach us, which the report notes."""
+
+    def __init__(self, iface: str, our_mac_addr: str,
+                 pairs: list[tuple[str, str]] | None = None, interval: float = 2.0):
+        """pairs: [(ipv6_or_mac_a, ipv6_or_mac_b), ...] — each side given as a link-local
+        address or a MAC (we derive the link-local via EUI-64)."""
+        self.iface = iface
+        self.our_mac = our_mac_addr
+        self.interval = interval
+        self.interfaces: list[tuple[str, str]] = []  # resolved (ll_a, ll_b)
+        for a, b in (pairs or []):
+            la = a if a.lower().startswith("fe80") else _ll_from_mac(a)
+            lb = b if b.lower().startswith("fe80") else _ll_from_mac(b)
+            if la and lb:
+                self.interfaces.append((la, lb))
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def _advert(self, victim_ll: str, claimed_ll: str):
+        from scapy.layers.inet6 import ICMPv6ND_NA, ICMPv6NDOptDstLLAddr, IPv6
+        from scapy.layers.l2 import Ether
+        from scapy.sendrecv import sendp
+
+        pkt = (Ether(src=self.our_mac)
+               / IPv6(src=claimed_ll, dst=victim_ll)
+               / ICMPv6ND_NA(tgt=claimed_ll, R=0, S=0, O=1)
+               / ICMPv6NDOptDstLLAddr(lladdr=self.our_mac))
+        sendp(pkt, iface=self.iface, verbose=False, count=1)
+
+    def _loop(self):
+        while not self._stop.is_set():
+            for la, lb in self.interfaces:
+                self._advert(la, lb)  # tell A: our MAC is B
+                self._advert(lb, la)  # tell B: our MAC is A
+            self._stop.wait(self.interval)
+
+    def start(self):
+        _quiet_scapy()
+        if not self.interfaces:
+            return self
+        self._thread = threading.Thread(target=self._loop, name="ndp-spoof", daemon=True)
+        self._thread.start()
+        print(f"NDP mode (experimental): spoofing {len(self.interfaces)} IPv6 link-local "
+              f"pair(s) on {self.iface}.", file=sys.stderr)
+        return self
+
+    def stop(self):
+        self._stop.set()
+        if self._thread:
+            self._thread.join(timeout=3)
+
+
 def start(target_ip: str, gateway_ip: str | None = None, iface: str | None = None,
           target_mac: str | None = None, gateway_mac: str | None = None,
           extra_peers: list[tuple[str, str]] | None = None):

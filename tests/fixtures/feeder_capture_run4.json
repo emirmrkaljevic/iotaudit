@@ -1,0 +1,973 @@
+[
+  {
+    "ip": "192.168.0.50",
+    "mac": "d8:1f:12:00:00:01",
+    "vendor": "Tuya Smart",
+    "profile": "iotbing.com cloud device (Tuya-associated pet feeder / camera)",
+    "grade": "D",
+    "score": 55,
+    "summary": "Device 192.168.0.50 (iotbing.com cloud device (Tuya-associated pet feeder / camera)). Grade D (55/100). Talked to: Amazon AWS, CGNAT / P2P peer, Google, OVH, iotbing (Tuya-associated cloud). Server countries observed: US. Telnet (port 23) is open on the LAN , change defaults / block it. Uses public DNS directly (bypasses your router). Used STUN/TURN (typical for P2P video setup). LAN peer traffic 3360 bytes vs internet 118098 bytes (video may have stayed on Wi-Fi). Uploads while app idle: none detected. Traffic pattern: 6 active burst(s) detected. 1 destination(s) look like custom/non-TLS encryption (unverified).",
+    "idle_upload": "none detected",
+    "findings": [
+      {
+        "severity": "medium",
+        "title": "Hardcoded public DNS (bypasses router)",
+        "detail": "Device sent DNS to 8.8.8.8, bypassing your router's DNS. Queries may leave your network even if you run Pi-hole.",
+        "category": "dns",
+        "confidence": "certain"
+      },
+      {
+        "severity": "info",
+        "title": "STUN/TURN (P2P video setup)",
+        "detail": "STUN/TURN to 44.254.214.222 (Amazon AWS) , typical for peer-to-peer video/audio; the media may stay on the LAN or go via a relay.",
+        "category": "traffic-class",
+        "confidence": "high"
+      },
+      {
+        "severity": "medium",
+        "title": "Non-standard encryption (custom protocol), unverified",
+        "detail": "Traffic to 15.204.79.232 (ports [1443]) looks encrypted by entropy but is not TLS. High entropy (7.20) without TLS handshake , non-standard encryption (custom protocol), unverified.",
+        "confidence": "medium",
+        "category": "encryption"
+      },
+      {
+        "severity": "info",
+        "title": "STUN/TURN (P2P video setup)",
+        "detail": "STUN/TURN to 15.204.72.48 (OVH) , typical for peer-to-peer video/audio; the media may stay on the LAN or go via a relay.",
+        "category": "traffic-class",
+        "confidence": "high"
+      },
+      {
+        "severity": "info",
+        "title": "Carrier NAT / P2P peer (100.64/10)",
+        "detail": "Traffic to 100.64.0.42 is in CGNAT space , often a phone or peer behind carrier-grade NAT during P2P video.",
+        "category": "traffic-class",
+        "confidence": "medium"
+      },
+      {
+        "severity": "high",
+        "title": "Open port 23/tcp (telnet)",
+        "detail": "Telnet exposes an unencrypted login shell.",
+        "confidence": "certain",
+        "category": "port"
+      },
+      {
+        "severity": "info",
+        "title": "Cloud servers outside the local network",
+        "detail": "Observed destination countries: US. This is a location note about servers the device contacted, not a judgement about where you live.",
+        "category": "location",
+        "confidence": "certain"
+      },
+      {
+        "severity": "info",
+        "title": "LAN peer traffic (device \u2194 phone/PC on your Wi-Fi)",
+        "detail": "3360 bytes unicast on LAN: 192.0.0.6 (3360B out / 0B in). Live video often stays here via P2P rather than as cloud upload. Broadcasts (e.g. Tuya :6667) are listed separately.",
+        "category": "traffic-class",
+        "confidence": "certain"
+      },
+      {
+        "severity": "info",
+        "title": "LAN discovery broadcasts",
+        "detail": "47952 bytes of broadcast/multicast (e.g. Tuya UDP 6667) , not media.",
+        "category": "traffic-class",
+        "confidence": "certain"
+      }
+    ],
+    "open_ports": [
+      {
+        "port": 23,
+        "proto": "tcp",
+        "service": "telnet",
+        "product": "BusyBox telnetd",
+        "risk": "high",
+        "why": "Telnet exposes an unencrypted login shell."
+      }
+    ],
+    "dns_queries": [
+      "a1-us.iotbing.com"
+    ],
+    "destinations": [
+      {
+        "ip": "15.204.79.232",
+        "looks_like": null,
+        "domains": [],
+        "country": "US",
+        "org": "OVH",
+        "ports": [
+          1443
+        ],
+        "bytes_out": 72152,
+        "bytes_in": 78792,
+        "packets": 1308,
+        "packets_in": 1420,
+        "encrypted": true,
+        "encryption_kind": "custom-encryption",
+        "encryption_detail": "High entropy (7.20) without TLS handshake , non-standard encryption (custom protocol), unverified.",
+        "readable_fraction": 0.4898255813953488,
+        "tracker": false,
+        "expected": null,
+        "protocols": [
+          "custom-1443"
+        ],
+        "traffic_class": {
+          "label": "telemetry",
+          "confidence": "medium",
+          "detail": "Low volume (~1312 bit/s) , looks like telemetry/control.",
+          "evidence": {
+            "bps": 1312,
+            "bytes": 72152,
+            "duration_s": 440,
+            "ports": [
+              1443
+            ],
+            "protocols": [
+              "custom-1443"
+            ]
+          }
+        },
+        "series": {
+          "1700003690": 2432,
+          "1700003700": 2160,
+          "1700003710": 2472,
+          "1700003720": 2160,
+          "1700003730": 2160,
+          "1700003740": 2160,
+          "1700003750": 1296,
+          "1700003760": 1512,
+          "1700003770": 1944,
+          "1700003780": 1400,
+          "1700003790": 2160,
+          "1700003800": 2160,
+          "1700003810": 1512,
+          "1700003820": 2160,
+          "1700003830": 1776,
+          "1700003840": 1432,
+          "1700003850": 1536,
+          "1700003860": 1848,
+          "1700003870": 2160,
+          "1700003880": 2160,
+          "1700003890": 2160,
+          "1700003900": 2160,
+          "1700003910": 2160,
+          "1700003920": 1512,
+          "1700003930": 1400,
+          "1700003940": 1944,
+          "1700003950": 2160,
+          "1700003960": 2160,
+          "1700003970": 2160,
+          "1700003980": 2160,
+          "1700003990": 2160,
+          "1700004000": 2160,
+          "1700004010": 2160,
+          "1700004020": 2160,
+          "1700004030": 2160,
+          "1700004040": 1944,
+          "1700004070": 520,
+          "1700004080": 104,
+          "1700004090": 104,
+          "1700004120": 104
+        },
+        "bursts": [
+          {
+            "kind": "idle",
+            "start": 1700003690,
+            "end": 1700004050,
+            "bytes": 71320
+          },
+          {
+            "kind": "idle",
+            "start": 1700004070,
+            "end": 1700004100,
+            "bytes": 728
+          },
+          {
+            "kind": "idle",
+            "start": 1700004120,
+            "end": 1700004130,
+            "bytes": 104
+          }
+        ],
+        "lan": false
+      },
+      {
+        "ip": "35.155.252.83",
+        "looks_like": null,
+        "domains": [
+          "a1-us.iotbing.com"
+        ],
+        "country": "US",
+        "org": "iotbing (Tuya-associated cloud)",
+        "ports": [
+          443
+        ],
+        "bytes_out": 17836,
+        "bytes_in": 10842,
+        "packets": 38,
+        "packets_in": 30,
+        "encrypted": true,
+        "encryption_kind": "tls",
+        "encryption_detail": "TLS record observed (ClientHello / port).",
+        "readable_fraction": 0.0,
+        "tracker": false,
+        "expected": true,
+        "protocols": [
+          "HTTPS"
+        ],
+        "traffic_class": {
+          "label": "unknown",
+          "confidence": "low",
+          "detail": "~14.3 kbit/s , not enough signal to classify.",
+          "evidence": {
+            "bps": 14269,
+            "bytes": 17836,
+            "duration_s": 10,
+            "ports": [
+              443
+            ],
+            "protocols": [
+              "HTTPS"
+            ]
+          }
+        },
+        "series": {
+          "1700004070": 17836
+        },
+        "bursts": [
+          {
+            "kind": "active",
+            "start": 1700004070,
+            "end": 1700004080,
+            "bytes": 17836
+          }
+        ],
+        "lan": false
+      },
+      {
+        "ip": "52.32.71.30",
+        "looks_like": null,
+        "domains": [],
+        "country": "US",
+        "org": "Amazon AWS",
+        "ports": [
+          8883
+        ],
+        "bytes_out": 16270,
+        "bytes_in": 23050,
+        "packets": 192,
+        "packets_in": 152,
+        "encrypted": true,
+        "encryption_kind": "tls",
+        "encryption_detail": "TLS record observed (ClientHello / port).",
+        "readable_fraction": 0.0,
+        "tracker": false,
+        "expected": null,
+        "protocols": [
+          "MQTT-over-TLS"
+        ],
+        "traffic_class": {
+          "label": "telemetry",
+          "confidence": "medium",
+          "detail": "Low volume (~102 bit/s) , looks like telemetry/control.",
+          "evidence": {
+            "bps": 102,
+            "bytes": 16270,
+            "duration_s": 1280,
+            "ports": [
+              8883
+            ],
+            "protocols": [
+              "MQTT-over-TLS"
+            ]
+          }
+        },
+        "series": {
+          "1700003180": 346,
+          "1700003240": 346,
+          "1700003300": 346,
+          "1700003360": 346,
+          "1700003420": 346,
+          "1700003480": 346,
+          "1700003540": 346,
+          "1700003600": 346,
+          "1700003660": 346,
+          "1700003690": 2812,
+          "1700003710": 104,
+          "1700003720": 450,
+          "1700003740": 104,
+          "1700003760": 104,
+          "1700003780": 450,
+          "1700003800": 104,
+          "1700003810": 402,
+          "1700003820": 104,
+          "1700003840": 450,
+          "1700003860": 104,
+          "1700003890": 104,
+          "1700003900": 346,
+          "1700003910": 104,
+          "1700003930": 104,
+          "1700003950": 104,
+          "1700003960": 346,
+          "1700003970": 104,
+          "1700004000": 104,
+          "1700004020": 450,
+          "1700004040": 104,
+          "1700004060": 104,
+          "1700004070": 1804,
+          "1700004080": 450,
+          "1700004110": 104,
+          "1700004130": 104,
+          "1700004140": 346,
+          "1700004150": 104,
+          "1700004170": 104,
+          "1700004200": 450,
+          "1700004220": 104,
+          "1700004240": 104,
+          "1700004260": 346,
+          "1700004270": 104,
+          "1700004290": 104,
+          "1700004310": 104,
+          "1700004330": 450,
+          "1700004350": 104,
+          "1700004380": 104,
+          "1700004390": 346,
+          "1700004400": 104,
+          "1700004420": 104,
+          "1700004440": 104,
+          "1700004450": 346
+        },
+        "bursts": [
+          {
+            "kind": "idle",
+            "start": 1700003180,
+            "end": 1700003190,
+            "bytes": 346
+          },
+          {
+            "kind": "idle",
+            "start": 1700003240,
+            "end": 1700003250,
+            "bytes": 346
+          },
+          {
+            "kind": "idle",
+            "start": 1700003300,
+            "end": 1700003310,
+            "bytes": 346
+          },
+          {
+            "kind": "idle",
+            "start": 1700003360,
+            "end": 1700003370,
+            "bytes": 346
+          },
+          {
+            "kind": "idle",
+            "start": 1700003420,
+            "end": 1700003430,
+            "bytes": 346
+          },
+          {
+            "kind": "idle",
+            "start": 1700003480,
+            "end": 1700003490,
+            "bytes": 346
+          },
+          {
+            "kind": "idle",
+            "start": 1700003540,
+            "end": 1700003550,
+            "bytes": 346
+          },
+          {
+            "kind": "idle",
+            "start": 1700003600,
+            "end": 1700003610,
+            "bytes": 346
+          },
+          {
+            "kind": "idle",
+            "start": 1700003660,
+            "end": 1700003670,
+            "bytes": 346
+          },
+          {
+            "kind": "active",
+            "start": 1700003690,
+            "end": 1700003700,
+            "bytes": 2812
+          },
+          {
+            "kind": "idle",
+            "start": 1700003710,
+            "end": 1700003870,
+            "bytes": 2376
+          },
+          {
+            "kind": "idle",
+            "start": 1700003890,
+            "end": 1700003980,
+            "bytes": 1212
+          },
+          {
+            "kind": "idle",
+            "start": 1700004000,
+            "end": 1700004090,
+            "bytes": 3016
+          },
+          {
+            "kind": "idle",
+            "start": 1700004110,
+            "end": 1700004180,
+            "bytes": 762
+          },
+          {
+            "kind": "idle",
+            "start": 1700004200,
+            "end": 1700004360,
+            "bytes": 1870
+          },
+          {
+            "kind": "idle",
+            "start": 1700004380,
+            "end": 1700004460,
+            "bytes": 1108
+          }
+        ],
+        "lan": false
+      },
+      {
+        "ip": "15.204.72.48",
+        "looks_like": null,
+        "domains": [],
+        "country": "US",
+        "org": "OVH",
+        "ports": [
+          3478
+        ],
+        "bytes_out": 4352,
+        "bytes_in": 3136,
+        "packets": 32,
+        "packets_in": 32,
+        "encrypted": true,
+        "encryption_kind": "stun",
+        "encryption_detail": "STUN/TURN signalling (not app-payload encryption).",
+        "readable_fraction": 0.0,
+        "tracker": false,
+        "expected": null,
+        "protocols": [
+          "STUN/TURN"
+        ],
+        "traffic_class": {
+          "label": "p2p-setup",
+          "confidence": "high",
+          "detail": "STUN/TURN present , P2P session setup (not proof that media flowed here).",
+          "evidence": {
+            "bps": 3482,
+            "bytes": 4352,
+            "duration_s": 10,
+            "ports": [
+              3478
+            ],
+            "protocols": [
+              "STUN/TURN"
+            ]
+          }
+        },
+        "series": {
+          "1700003690": 4352
+        },
+        "bursts": [
+          {
+            "kind": "active",
+            "start": 1700003690,
+            "end": 1700003700,
+            "bytes": 4352
+          }
+        ],
+        "lan": false
+      },
+      {
+        "ip": "100.64.0.42",
+        "looks_like": null,
+        "domains": [],
+        "country": null,
+        "org": "CGNAT / P2P peer",
+        "ports": [
+          63720
+        ],
+        "bytes_out": 3360,
+        "bytes_in": 0,
+        "packets": 24,
+        "packets_in": 0,
+        "encrypted": true,
+        "encryption_kind": "stun",
+        "encryption_detail": "Looks like STUN/P2P handshake (magic cookie), not app plaintext (entropy 5.70, readable 54%).",
+        "readable_fraction": 0.5357142857142857,
+        "tracker": false,
+        "expected": null,
+        "protocols": [
+          "CGNAT-peer"
+        ],
+        "traffic_class": {
+          "label": "telemetry",
+          "confidence": "medium",
+          "detail": "Low volume (~896 bit/s) , looks like telemetry/control.",
+          "evidence": {
+            "bps": 896,
+            "bytes": 3360,
+            "duration_s": 30,
+            "ports": [
+              63720
+            ],
+            "protocols": [
+              "CGNAT-peer"
+            ]
+          }
+        },
+        "series": {
+          "1700003690": 2240,
+          "1700003700": 560,
+          "1700003710": 560
+        },
+        "bursts": [
+          {
+            "kind": "idle",
+            "start": 1700003690,
+            "end": 1700003720,
+            "bytes": 3360
+          }
+        ],
+        "lan": false
+      },
+      {
+        "ip": "35.165.227.234",
+        "looks_like": null,
+        "domains": [
+          "a1-us.iotbing.com"
+        ],
+        "country": "US",
+        "org": "iotbing (Tuya-associated cloud)",
+        "ports": [
+          443
+        ],
+        "bytes_out": 3236,
+        "bytes_in": 10826,
+        "packets": 28,
+        "packets_in": 26,
+        "encrypted": true,
+        "encryption_kind": "tls",
+        "encryption_detail": "TLS record observed (ClientHello / port).",
+        "readable_fraction": 0.0,
+        "tracker": false,
+        "expected": true,
+        "protocols": [
+          "HTTPS"
+        ],
+        "traffic_class": {
+          "label": "telemetry",
+          "confidence": "medium",
+          "detail": "Low volume (~2589 bit/s) , looks like telemetry/control.",
+          "evidence": {
+            "bps": 2589,
+            "bytes": 3236,
+            "duration_s": 10,
+            "ports": [
+              443
+            ],
+            "protocols": [
+              "HTTPS"
+            ]
+          }
+        },
+        "series": {
+          "1700003650": 3236
+        },
+        "bursts": [
+          {
+            "kind": "active",
+            "start": 1700003650,
+            "end": 1700003660,
+            "bytes": 3236
+          }
+        ],
+        "lan": false
+      },
+      {
+        "ip": "44.254.214.222",
+        "looks_like": null,
+        "domains": [],
+        "country": "US",
+        "org": "Amazon AWS",
+        "ports": [
+          3478
+        ],
+        "bytes_out": 640,
+        "bytes_in": 544,
+        "packets": 8,
+        "packets_in": 8,
+        "encrypted": true,
+        "encryption_kind": "stun",
+        "encryption_detail": "STUN/TURN signalling (not app-payload encryption).",
+        "readable_fraction": 0.0,
+        "tracker": false,
+        "expected": null,
+        "protocols": [
+          "STUN/TURN"
+        ],
+        "traffic_class": {
+          "label": "p2p-setup",
+          "confidence": "high",
+          "detail": "STUN/TURN present , P2P session setup (not proof that media flowed here).",
+          "evidence": {
+            "bps": 512,
+            "bytes": 640,
+            "duration_s": 10,
+            "ports": [
+              3478
+            ],
+            "protocols": [
+              "STUN/TURN"
+            ]
+          }
+        },
+        "series": {
+          "1700003690": 640
+        },
+        "bursts": [
+          {
+            "kind": "idle",
+            "start": 1700003690,
+            "end": 1700003700,
+            "bytes": 640
+          }
+        ],
+        "lan": false
+      },
+      {
+        "ip": "8.8.8.8",
+        "looks_like": null,
+        "domains": [],
+        "country": "US",
+        "org": "Google",
+        "ports": [
+          53
+        ],
+        "bytes_out": 252,
+        "bytes_in": 444,
+        "packets": 4,
+        "packets_in": 4,
+        "encrypted": false,
+        "encryption_kind": "plaintext",
+        "encryption_detail": "Low entropy (3.69), likely plaintext.",
+        "readable_fraction": 0.45714285714285713,
+        "tracker": false,
+        "expected": null,
+        "protocols": [
+          "DNS"
+        ],
+        "traffic_class": {
+          "label": "telemetry",
+          "confidence": "medium",
+          "detail": "Low volume (~5 bit/s) , looks like telemetry/control.",
+          "evidence": {
+            "bps": 5,
+            "bytes": 252,
+            "duration_s": 430,
+            "ports": [
+              53
+            ],
+            "protocols": [
+              "DNS"
+            ]
+          }
+        },
+        "series": {
+          "1700003650": 126,
+          "1700004070": 126
+        },
+        "bursts": [
+          {
+            "kind": "idle",
+            "start": 1700003650,
+            "end": 1700003660,
+            "bytes": 126
+          },
+          {
+            "kind": "idle",
+            "start": 1700004070,
+            "end": 1700004080,
+            "bytes": 126
+          }
+        ],
+        "lan": false
+      }
+    ],
+    "lan_peers": [
+      {
+        "ip": "192.0.0.6",
+        "looks_like": null,
+        "domains": [],
+        "country": null,
+        "org": null,
+        "ports": [
+          63720
+        ],
+        "bytes_out": 3360,
+        "bytes_in": 0,
+        "packets": 24,
+        "packets_in": 0,
+        "encrypted": true,
+        "encryption_kind": "stun",
+        "encryption_detail": "Looks like STUN/P2P handshake (magic cookie), not app plaintext (entropy 5.67, readable 56%).",
+        "readable_fraction": 0.5625,
+        "tracker": false,
+        "expected": null,
+        "protocols": [],
+        "traffic_class": {
+          "label": "telemetry",
+          "confidence": "medium",
+          "detail": "Low volume (~896 bit/s) , looks like telemetry/control.",
+          "evidence": {
+            "bps": 896,
+            "bytes": 3360,
+            "duration_s": 30,
+            "ports": [
+              63720
+            ],
+            "protocols": []
+          }
+        },
+        "series": {
+          "1700003690": 2240,
+          "1700003700": 560,
+          "1700003710": 560
+        },
+        "bursts": [
+          {
+            "kind": "idle",
+            "start": 1700003690,
+            "end": 1700003720,
+            "bytes": 3360
+          }
+        ],
+        "lan": true
+      }
+    ],
+    "broadcasts": [
+      {
+        "ip": "255.255.255.255",
+        "port": 6667,
+        "proto": "udp",
+        "bytes_out": 47952,
+        "packets": 222
+      }
+    ],
+    "series_total": {
+      "1700003180": 346,
+      "1700003240": 346,
+      "1700003300": 346,
+      "1700003360": 346,
+      "1700003420": 346,
+      "1700003480": 346,
+      "1700003540": 346,
+      "1700003600": 346,
+      "1700003650": 3362,
+      "1700003660": 346,
+      "1700003690": 12476,
+      "1700003700": 2720,
+      "1700003710": 3136,
+      "1700003720": 2610,
+      "1700003730": 2160,
+      "1700003740": 2264,
+      "1700003750": 1296,
+      "1700003760": 1616,
+      "1700003770": 1944,
+      "1700003780": 1850,
+      "1700003790": 2160,
+      "1700003800": 2264,
+      "1700003810": 1914,
+      "1700003820": 2264,
+      "1700003830": 1776,
+      "1700003840": 1882,
+      "1700003850": 1536,
+      "1700003860": 1952,
+      "1700003870": 2160,
+      "1700003880": 2160,
+      "1700003890": 2264,
+      "1700003900": 2506,
+      "1700003910": 2264,
+      "1700003920": 1512,
+      "1700003930": 1504,
+      "1700003940": 1944,
+      "1700003950": 2264,
+      "1700003960": 2506,
+      "1700003970": 2264,
+      "1700003980": 2160,
+      "1700003990": 2160,
+      "1700004000": 2264,
+      "1700004010": 2160,
+      "1700004020": 2610,
+      "1700004030": 2160,
+      "1700004040": 2048,
+      "1700004060": 104,
+      "1700004070": 20286,
+      "1700004080": 554,
+      "1700004090": 104,
+      "1700004110": 104,
+      "1700004120": 104,
+      "1700004130": 104,
+      "1700004140": 346,
+      "1700004150": 104,
+      "1700004170": 104,
+      "1700004200": 450,
+      "1700004220": 104,
+      "1700004240": 104,
+      "1700004260": 346,
+      "1700004270": 104,
+      "1700004290": 104,
+      "1700004310": 104,
+      "1700004330": 450,
+      "1700004350": 104,
+      "1700004380": 104,
+      "1700004390": 346,
+      "1700004400": 104,
+      "1700004420": 104,
+      "1700004440": 104,
+      "1700004450": 346
+    },
+    "bursts": [
+      {
+        "kind": "idle",
+        "start": 1700003180,
+        "end": 1700003190,
+        "bytes": 346
+      },
+      {
+        "kind": "idle",
+        "start": 1700003240,
+        "end": 1700003250,
+        "bytes": 346
+      },
+      {
+        "kind": "idle",
+        "start": 1700003300,
+        "end": 1700003310,
+        "bytes": 346
+      },
+      {
+        "kind": "idle",
+        "start": 1700003360,
+        "end": 1700003370,
+        "bytes": 346
+      },
+      {
+        "kind": "idle",
+        "start": 1700003420,
+        "end": 1700003430,
+        "bytes": 346
+      },
+      {
+        "kind": "idle",
+        "start": 1700003480,
+        "end": 1700003490,
+        "bytes": 346
+      },
+      {
+        "kind": "idle",
+        "start": 1700003540,
+        "end": 1700003550,
+        "bytes": 346
+      },
+      {
+        "kind": "idle",
+        "start": 1700003600,
+        "end": 1700003610,
+        "bytes": 346
+      },
+      {
+        "kind": "active",
+        "start": 1700003650,
+        "end": 1700003660,
+        "bytes": 3362
+      },
+      {
+        "kind": "idle",
+        "start": 1700003660,
+        "end": 1700003670,
+        "bytes": 346
+      },
+      {
+        "kind": "active",
+        "start": 1700003690,
+        "end": 1700003730,
+        "bytes": 20942
+      },
+      {
+        "kind": "idle",
+        "start": 1700003730,
+        "end": 1700003900,
+        "bytes": 33462
+      },
+      {
+        "kind": "active",
+        "start": 1700003900,
+        "end": 1700003910,
+        "bytes": 2506
+      },
+      {
+        "kind": "idle",
+        "start": 1700003910,
+        "end": 1700003960,
+        "bytes": 9488
+      },
+      {
+        "kind": "active",
+        "start": 1700003960,
+        "end": 1700003970,
+        "bytes": 2506
+      },
+      {
+        "kind": "idle",
+        "start": 1700003970,
+        "end": 1700004020,
+        "bytes": 11008
+      },
+      {
+        "kind": "active",
+        "start": 1700004020,
+        "end": 1700004030,
+        "bytes": 2610
+      },
+      {
+        "kind": "idle",
+        "start": 1700004030,
+        "end": 1700004070,
+        "bytes": 4312
+      },
+      {
+        "kind": "active",
+        "start": 1700004070,
+        "end": 1700004080,
+        "bytes": 20286
+      },
+      {
+        "kind": "idle",
+        "start": 1700004080,
+        "end": 1700004180,
+        "bytes": 1524
+      },
+      {
+        "kind": "idle",
+        "start": 1700004200,
+        "end": 1700004360,
+        "bytes": 1870
+      },
+      {
+        "kind": "idle",
+        "start": 1700004380,
+        "end": 1700004460,
+        "bytes": 1108
+      }
+    ]
+  }
+]

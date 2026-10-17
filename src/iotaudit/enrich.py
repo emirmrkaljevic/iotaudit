@@ -264,3 +264,64 @@ def is_cgnat(ip: str) -> bool:
     except ValueError:
         return False
 
+
+# RFC 1918 / ULA: addresses a real device on your own Wi-Fi can actually hold.
+HOME_LAN_NETS = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16",
+                 "fe80::/10", "fc00::/7")
+
+# Special-use / documentation / bogon ranges. Python's ipaddress marks some of these
+# (e.g. 192.0.0.0/24) as "private", which wrongly made them look like LAN peers. A real
+# home device is never addressed from these; when one shows up as a "LAN peer" it is almost
+# always a placeholder/DS-Lite address or an address carried *inside* P2P/STUN signalling.
+SPECIAL_USE_NETS = {
+    "0.0.0.0/8": "unspecified/this-network (0.0.0.0/8)",
+    "192.0.0.0/24": "IETF protocol-assignment / DS-Lite space (192.0.0.0/24)",
+    "192.0.2.0/24": "documentation TEST-NET-1 (192.0.2.0/24)",
+    "198.51.100.0/24": "documentation TEST-NET-2 (198.51.100.0/24)",
+    "203.0.113.0/24": "documentation TEST-NET-3 (203.0.113.0/24)",
+    "198.18.0.0/15": "benchmarking (198.18.0.0/15)",
+    "240.0.0.0/4": "reserved (240.0.0.0/4)",
+    "2001:db8::/32": "documentation (2001:db8::/32)",
+    "100::/64": "discard-only (100::/64)",
+}
+
+
+def _in_any(ip: str, nets) -> str | None:
+    import ipaddress
+    try:
+        a = ipaddress.ip_address(ip)
+    except ValueError:
+        return None
+    for net in nets:
+        try:
+            if a in ipaddress.ip_network(net):
+                return net
+        except ValueError:
+            continue
+    return None
+
+
+def is_home_lan(ip: str) -> bool:
+    """True for addresses a device on your own Wi-Fi/LAN can genuinely hold (RFC1918 + IPv6 LL/ULA)."""
+    return _in_any(ip, HOME_LAN_NETS) is not None
+
+
+def is_special_use(ip: str) -> bool:
+    """True for documentation/reserved/protocol-assignment ranges (incl. 192.0.0.0/24)."""
+    return _in_any(ip, SPECIAL_USE_NETS) is not None
+
+
+def special_use_label(ip: str) -> str:
+    net = _in_any(ip, SPECIAL_USE_NETS)
+    base = SPECIAL_USE_NETS.get(net, "special-use address")
+    return (f"special-use {base} — not a real device on your Wi-Fi; "
+            "likely a placeholder/DS-Lite address or one carried inside P2P/STUN signalling")
+
+
+def is_ipv6(ip: str) -> bool:
+    import ipaddress
+    try:
+        return ipaddress.ip_address(ip).version == 6
+    except ValueError:
+        return False
+

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from . import __version__
 from .analyze import build_devices, to_dict
-from .capture import Collector, from_pcap, live
+from .capture import Collector, build_bpf, from_pcap, live
 from .consent import require_consent
 from .enrich import Geo
 from .report import render_html
@@ -71,6 +71,7 @@ def cmd_capture(args) -> int:
         print(f"Hotspot '{args.ssid}' up on {args.iface}. Join your device to it now.",
               file=sys.stderr)
     spoofer = None
+    ndp_spoofer = None
     fwd = None
     bpf = None
     if args.mode == "arp":
@@ -119,7 +120,10 @@ def cmd_capture(args) -> int:
         spoofer = arp.start(target_ip, gw_ip, iface,
                             target_mac=target_mac, gateway_mac=gateway_mac,
                             extra_peers=extra_peers)
-        bpf = f"host {target_ip}"
+        bpf = build_bpf(target_ip, target_mac, ipv6=not args.no_ipv6)
+        if args.ipv6_ndp and extra_peers and target_mac:
+            pairs = [(target_mac, pmac) for (_pip, pmac) in extra_peers]
+            ndp_spoofer = arp.NDPSpoofer(iface, arp.our_mac(iface), pairs=pairs).start()
     elif iface == "auto":
         try:
             from .arp import resolve_iface
@@ -136,6 +140,8 @@ def cmd_capture(args) -> int:
             from . import hotspot
 
             hotspot.stop()
+        if ndp_spoofer is not None:
+            ndp_spoofer.stop()
         if spoofer is not None:
             print("Restoring ARP tables...", file=sys.stderr)
             spoofer.stop()
@@ -184,6 +190,11 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--keep-hotspot", action="store_true")
     c.add_argument("--watch-lan", action=argparse.BooleanOptionalAction, default=None,
                    help="ARP-spoof target<->LAN peers for phone P2P (default on with picker)")
+    c.add_argument("--no-ipv6", action="store_true",
+                   help="do not add IPv6/ICMPv6 (NDP) to the capture filter")
+    c.add_argument("--ipv6-ndp", action="store_true",
+                   help="experimental: also NDP-spoof IPv6 link-local so phone<->device "
+                        "IPv6 unicast is visible (ARP-mode only)")
     c.add_argument("--i-own-this-network", action="store_true")
     common(c)
     c.set_defaults(func=cmd_capture)
