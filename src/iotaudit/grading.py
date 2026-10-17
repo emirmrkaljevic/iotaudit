@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .enrich import PUBLIC_DNS, is_cgnat
+from .enrich import PUBLIC_DNS, is_cgnat, is_special_use
 
 PENALTY = {"high": 25, "medium": 10, "low": 4, "info": 0}
 # Telnet is especially bad — already high (25); keep explicit weight note in finding.
@@ -166,19 +166,36 @@ def findings_for(device) -> list[dict]:
             "category": "location", "confidence": "certain",
         })
 
-    lan_bytes = sum(d.bytes_out + d.bytes_in for d in device.lan_peers.values())
-    if lan_bytes:
+    real_peers = {ip: d for ip, d in device.lan_peers.items()
+                  if not (d.__dict__.get("special_use") or is_special_use(ip))}
+    special_peers = {ip: d for ip, d in device.lan_peers.items()
+                     if d.__dict__.get("special_use") or is_special_use(ip)}
+    real_lan_bytes = sum(d.bytes_out + d.bytes_in for d in real_peers.values())
+    if real_lan_bytes:
         peer_bits = []
-        for ip, d in list(device.lan_peers.items())[:6]:
+        for ip, d in list(real_peers.items())[:6]:
             tag = d.__dict__.get("looks_like") or ip
             peer_bits.append(f"{tag} ({d.bytes_out}B out / {d.bytes_in}B in)")
         f.append({
             "severity": "info",
             "title": "LAN peer traffic (device ↔ phone/PC on your Wi-Fi)",
-            "detail": f"{lan_bytes} bytes unicast on LAN: " + "; ".join(peer_bits) + ". "
+            "detail": f"{real_lan_bytes} bytes unicast on LAN: " + "; ".join(peer_bits) + ". "
                       "Live video often stays here via P2P rather than as cloud upload. "
                       "Broadcasts (e.g. Tuya :6667) are listed separately.",
             "category": "traffic-class", "confidence": "certain",
+        })
+    if special_peers:
+        bits = []
+        for ip, d in list(special_peers.items())[:4]:
+            bits.append(f"{ip} ({d.bytes_out + d.bytes_in}B)")
+        f.append({
+            "severity": "info",
+            "title": "Odd \"LAN peer\" in special-use address space",
+            "detail": "Saw traffic to/from " + ", ".join(bits) + ", which is reserved / "
+                      "protocol-assignment space (e.g. 192.0.0.0/24), not a real device on your "
+                      "Wi-Fi. It is almost always a placeholder/DS-Lite address or an address "
+                      "carried inside P2P/STUN signalling — not a second hidden gadget.",
+            "category": "traffic-class", "confidence": "high",
         })
     if getattr(device, "broadcasts", None):
         total = sum(b.get("bytes_out", 0) for b in device.broadcasts)
@@ -187,6 +204,60 @@ def findings_for(device) -> list[dict]:
             "title": "LAN discovery broadcasts",
             "detail": f"{total} bytes of broadcast/multicast (e.g. Tuya UDP 6667) — not media.",
             "category": "traffic-class", "confidence": "certain",
+        })
+
+    # Honest note: STUN/P2P was set up but no media stream was actually captured here.
+    stun_present = any((3478 in d.ports) or ("STUN/TURN" in d.protocols) for d in dests)
+    observed_media = any(
+        (d.traffic_class and d.traffic_class.label in ("video", "audio", "audio+video")
+         and d.traffic_class.confidence in ("medium", "high"))
+        for d in dests + list(device.lan_peers.values())
+    )
+    _real_lan_bytes = sum(
+        d.bytes_out + d.bytes_in for ip, d in device.lan_peers.items()
+        if not (d.__dict__.get("special_use") or is_special_use(ip))
+    )
+    ipv6 = getattr(device, "__dict__", {}).get("ipv6") or {}
+    ipv6_ndp = sum((ipv6.get("ndp") or {}).values()) if isinstance(ipv6.get("ndp"), dict) else 0
+    ipv6_media = ipv6.get("bytes", 0) or 0
+    if stun_present and not observed_media and _real_lan_bytes < 500_000 and ipv6_media < 500_000:
+        extra = ""
+        if ipv6_ndp or ipv6.get("flows"):
+            extra = (f" IPv6 was active (NDP messages: {ipv6_ndp}, "
+                     f"IPv6 flows seen: {ipv6.get('flows', 0)}), so the stream may be riding "
+                     "IPv6 link-local between the two devices.")
+        f.append({
+            "severity": "info",
+            "title": "Live video set up but not observed here",
+            "detail": "The device negotiated a peer-to-peer session (STUN/TURN) but no sustained "
+                      "video/audio stream was captured on this run. It most likely went directly "
+                      "between the device and your phone over Wi-Fi (P2P) and never passed through "
+                      "this computer: two Wi-Fi clients can talk without their traffic crossing "
+                      "your Mac, and spoofed ARP/NDP may not redirect it (client isolation, or the "
+                      "phone ignoring the spoof)." + extra + " Not observed does not mean it did "
+                      "not happen — re-run with the app streaming, or capture at the router.",
+            "category": "traffic-class", "confidence": "high",
+        })
+    # IPv6 coverage note (always, so the report is explicit about what it could see).
+    if ipv6.get("any_ipv6_seen"):
+        f.append({
+            "severity": "info",
+            "title": "IPv6 traffic observed",
+            "detail": f"{ipv6.get('flows', 0)} IPv6 flow(s), {ipv6.get('bytes', 0)} bytes "
+                      f"({ipv6.get('link_local_bytes', 0)} on link-local fe80::); "
+                      f"NDP neighbor-discovery messages: {ipv6_ndp}. IPv6 enrichment "
+                      "(country/org) is limited; link-local P2P between two Wi-Fi clients may not "
+                      "be fully capturable without router-side capture.",
+            "category": "traffic-class", "confidence": "certain",
+        })
+    elif isinstance(ipv6, dict) and "any_ipv6_seen" in ipv6 and stun_present:
+        f.append({
+            "severity": "info",
+            "title": "No IPv6 traffic observed",
+            "detail": "No IPv6 packets or NDP were seen from this device on this run. If live "
+                      "video still was not captured, the stream likely stayed on IPv4 LAN P2P "
+                      "(not redirected to us) rather than on IPv6.",
+            "category": "traffic-class", "confidence": "medium",
         })
 
     # Deduplicate similar titles (keep first)
@@ -235,11 +306,15 @@ def summarize(device) -> str:
         bits.append("Uses public DNS directly (bypasses your router).")
     if any(3478 in d.ports for d in dests):
         bits.append("Used STUN/TURN (typical for P2P video setup).")
-    lan = sum(d.bytes_out for d in device.lan_peers.values())
+    lan = sum(d.bytes_out for ip, d in device.lan_peers.items()
+              if not (d.__dict__.get("special_use") or is_special_use(ip)))
     wan = sum(d.bytes_out for d in dests)
     if lan:
         bits.append(f"LAN peer traffic {lan} bytes vs internet {wan} bytes "
                     "(video may have stayed on Wi-Fi).")
+    elif any(3478 in d.ports for d in dests):
+        bits.append("A P2P video session was set up but no media stream was captured here — "
+                    "it likely went straight to your phone over Wi-Fi (not observed).")
     if device.idle_upload:
         bits.append(f"Uploads while app idle: {device.idle_upload}.")
     if device.bursts:

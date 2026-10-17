@@ -32,6 +32,11 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
   {% if d.profile %}&middot; profile: {{ d.profile }}{% endif %} &middot; score {{ d.score }}/100</p>
   {% if d.summary %}<div class="summary"><b>Summary.</b> {{ d.summary }}</div>{% endif %}
   {% if d.idle_upload %}<p><b>Uploads while app idle:</b> {{ d.idle_upload }}</p>{% endif %}
+  {% if d.ipv6 and d.ipv6.any_ipv6_seen %}<p class="muted"><b>IPv6:</b> {{ d.ipv6.flows }} flow(s),
+  {{ d.ipv6.bytes }} bytes ({{ d.ipv6.link_local_bytes }} on link-local fe80::); NDP messages:
+  {% set n = d.ipv6.ndp %}{{ (n.ns or 0) + (n.na or 0) + (n.rs or 0) + (n.ra or 0) + (n.redirect or 0) }}
+  (NS {{ n.ns or 0 }}, NA {{ n.na or 0 }}), neighbours {{ d.ipv6.neighbors }}.</p>
+  {% elif d.ipv6 is defined and "any_ipv6_seen" in d.ipv6 %}<p class="muted"><b>IPv6:</b> none observed.</p>{% endif %}
   {% if d.series_total %}
   <h3>Traffic over time (10s buckets)</h3>
   {% set ns = namespace(mx=1) %}
@@ -76,8 +81,9 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
   <h3>LAN peers (same Wi-Fi — often phone P2P video)</h3>
   <table><tr><th>IP</th><th>Ports</th><th>Bytes</th><th>Class</th></tr>
   {% for x in d.lan_peers %}<tr>
-    <td>{{ x.ip }}</td><td>{{ x.ports|join(", ") }}</td><td>{{ x.bytes_out }} out / {{ x.bytes_in or 0 }} in</td>
-    <td>{% if x.traffic_class %}{{ x.traffic_class.label }}{% else %}—{% endif %}</td>
+    <td>{{ x.ip }}{% if x.special_use %} <span class="tag">special-use / not a real device</span>{% endif %}</td>
+    <td>{{ x.ports|join(", ") }}</td><td>{{ x.bytes_out }} out / {{ x.bytes_in or 0 }} in</td>
+    <td>{% if x.special_use %}<span class="muted">bogon/placeholder</span>{% elif x.traffic_class %}{{ x.traffic_class.label }}{% else %}—{% endif %}</td>
   </tr>{% endfor %}
   </table>
   {% endif %}
