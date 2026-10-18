@@ -30,6 +30,9 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
   <h2>{{ d.ip }}</h2>
   <p class="muted">MAC {{ d.mac or "?" }} &middot; {{ d.vendor or "unknown vendor" }}
   {% if d.profile %}&middot; profile: {{ d.profile }}{% endif %} &middot; score {{ d.score }}/100</p>
+  {% if d.device_type and d.device_type.type %}<p class="muted"><b>Looks like a {{ d.device_type.label }}</b>
+  <span class="tag">type confidence: {{ d.device_type.confidence }}</span>{% if d.device_type.evidence %}
+  <br><span class="muted">why: {{ d.device_type.evidence[:4]|join("; ") }}</span>{% endif %}</p>{% endif %}
   {% if d.summary %}<div class="summary"><b>Summary.</b> {{ d.summary }}</div>{% endif %}
   {% if d.idle_upload %}<p><b>Uploads while app idle:</b> {{ d.idle_upload }}</p>{% endif %}
   {% if d.ipv6 and d.ipv6.any_ipv6_seen %}<p class="muted"><b>IPv6:</b> {{ d.ipv6.flows }} flow(s),

@@ -348,8 +348,25 @@ def identify_device(ip: str, mac: str | None = None, hostname: str | None = None
     else:
         return {"looks_like": "Unknown device", "confidence": "low", "evidence": evidence,
                 "open_ports": open_ports}
+    from .devicetype import identify_device_type
+
+    mdns_svcs = list(mdns.get(ip, [])) if mdns else []
+    ssdp_blob = None
+    if ssdp and ip in ssdp:
+        info = ssdp[ip]
+        ssdp_blob = " ".join(str(v) for v in (info.get("friendly_name"),
+                             info.get("model_name"), info.get("manufacturer")) if v)
+    dtype = identify_device_type(
+        open_ports=open_ports,
+        domains=[ssdp_blob] if ssdp_blob else [],
+        mdns=mdns_svcs,
+        vendor=vendor,
+        hostname=hostname,
+    )
     return {"looks_like": best_label, "confidence": best_conf, "evidence": evidence,
-            "open_ports": open_ports}
+            "open_ports": open_ports, "device_type": dtype.get("type"),
+            "device_type_label": dtype.get("label"),
+            "device_type_confidence": dtype.get("confidence")}
 
 
 def identify_network(devices: list[dict], budget_s: float = 15.0) -> list[dict]:
@@ -395,6 +412,9 @@ def identify_network(devices: list[dict], budget_s: float = 15.0) -> list[dict]:
         d["id_confidence"] = info["confidence"]
         d["id_evidence"] = info.get("evidence") or []
         d["open_ports"] = info.get("open_ports") or []
+        d["device_type"] = info.get("device_type")
+        d["device_type_label"] = info.get("device_type_label")
+        d["device_type_confidence"] = info.get("device_type_confidence")
         if is_likely_iot(d.get("vendor")) or "Tuya" in (d["looks_like"] or ""):
             d["likely_iot"] = True
         out.append(d)

@@ -291,6 +291,9 @@ def summarize(device) -> str:
     bits = []
     who = device.profile or device.vendor or device.ip
     bits.append(f"Device {device.ip}" + (f" ({who})" if who != device.ip else "") + ".")
+    dt = getattr(device, "__dict__", {}).get("device_type")
+    if dt and dt.get("type") and dt.get("confidence") in ("high", "medium"):
+        bits.append(f"Looks like a {dt['label']} ({dt['confidence']} confidence).")
     if device.grade:
         bits.append(f"Grade {device.grade} ({device.score}/100).")
     dests = list(device.destinations.values())
