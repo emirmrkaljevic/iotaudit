@@ -48,3 +48,28 @@ jobs:
           path: dist/
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+
+  mcp-registry:
+    # Lists the MCP server on the official registry once the PyPI version is available.
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write            # OIDC token for GitHub-authenticated registry publish
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+      - name: Wait for PyPI to serve this version
+        run: |
+          v=$(python3 -c "import json;print(json.load(open('server.json'))['version'])")
+          for i in $(seq 1 30); do
+            curl -fsS "https://pypi.org/pypi/iotaudit/$v/json" >/dev/null && exit 0
+            sleep 10
+          done
+          echo "PyPI did not serve version $v in time" >&2; exit 1
+      - run: ./mcp-publisher login github-oidc
+      - run: ./mcp-publisher publish

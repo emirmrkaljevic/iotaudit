@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
   "name": "io.github.emirmrkaljevic/iotaudit",
-  "description": "Audit your own smart-home devices: who they talk to, encryption, open ports, idle uploads, and an A-F grade report.",
+  "description": "Audit your own smart-home devices: destinations, encryption, open ports, A-F grade.",
   "repository": {
     "url": "https://github.com/emirmrkaljevic/iotaudit",
     "source": "github"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "iotaudit",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "transport": {
         "type": "stdio"
       },

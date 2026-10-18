@@ -3,6 +3,22 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-10-18
+
+### Added
+- **Evidence-based device-type identification** (camera, plug/bulb, TV, speaker, robot vacuum,
+  printer, NAS, hub, phone, computer). Each signal names its source (open ports, mDNS, SSDP,
+  OUI, hostname, and the cloud domains/SNI the device talked to); confidence is "high" only
+  when independent sources agree or one is near-conclusive, otherwise "medium"/"low". Shown in
+  the report and summary, and attached to each device as `device_type`.
+- **PCAPdroid import** for an Android path: `from_pcap` auto-detects PCAPdroid captures, strips
+  the bogus Ethernet header + per-packet trailer (so no fake MAC is learned), and records the
+  originating app names in `collector.apps`.
+- `publish.yml` now also lists the server on the official MCP registry (OIDC) after PyPI.
+
+### Changed
+- Shortened `server.json` description to satisfy the MCP registry (<=100 chars).
+
 ## [0.1.0] - 2026-10-17
 
 First tagged release. iotaudit audits **your own** smart-home devices: it watches what each one
