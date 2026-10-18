@@ -347,10 +347,60 @@ def live(iface: str | None, seconds: int, collector: Collector,
     return collector
 
 
-def from_pcap(path: str, collector: Collector) -> Collector:
+PCAPDROID_TRAILER_MAGIC = b"\x01\x07\x20\x21"  # 0x01072021, big-endian
+
+
+def _strip_pcapdroid(pkt):
+    """If a packet carries a PCAPdroid trailer (bogus Ethernet header + 32-byte trailer appended
+    after the L3 data), return (clean_ip_packet, appname); otherwise (pkt, None).
+
+    PCAPdroid frames look like [ETH(bogus) | IP | payload | trailer]. The fake Ethernet MACs are
+    meaningless, so we drop down to the IP layer (no MAC is learned) and trim the trailer bytes."""
+    raw = bytes(pkt)
+    idx = raw.rfind(PCAPDROID_TRAILER_MAGIC, max(0, len(raw) - 40))
+    if idx < 0:
+        return pkt, None
+    appname = None
+    try:
+        # trailer: magic(4) uid(4) appname(20) fcs(4)
+        appname = raw[idx + 8:idx + 28].split(b"\x00", 1)[0].decode("ascii", "replace") or None
+    except Exception:  # noqa: BLE001
+        appname = None
+    from scapy.layers.inet import IP
+    from scapy.layers.inet6 import IPv6
+
+    inner = None
+    if IP in pkt:
+        inner = pkt[IP]
+    elif IPv6 in pkt:
+        inner = pkt[IPv6]
+    if inner is None:
+        return pkt, appname
+    # Re-parse only the real L3 bytes, dropping the appended trailer/padding.
+    try:
+        cls = inner.__class__
+        clean = cls(bytes(inner))
+        return clean, appname
+    except Exception:  # noqa: BLE001
+        return inner, appname
+
+
+def from_pcap(path: str, collector: Collector, pcapdroid: bool | None = None) -> Collector:
+    """Read a pcap/pcapng. PCAPdroid captures (Android) are detected automatically: the bogus
+    Ethernet header + per-packet trailer are stripped, and app names are recorded in
+    collector.apps. Pass pcapdroid=True/False to force detection on/off."""
     from scapy.utils import PcapReader
 
+    if not hasattr(collector, "apps"):
+        collector.apps = {}
     with PcapReader(path) as rd:
         for pkt in rd:
+            if pcapdroid is not False:
+                clean, app = _strip_pcapdroid(pkt)
+                if app is not None:
+                    pkt = clean
+                    collector.apps[app] = collector.apps.get(app, 0) + 1
+                elif pcapdroid is True:
+                    pkt = clean
             collector.add(pkt)
     return collector
