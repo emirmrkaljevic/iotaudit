@@ -190,6 +190,17 @@ def build_devices(
             dest.__dict__["ipv6"] = col.ipv6_summary(dest.mac)
         except Exception:  # noqa: BLE001
             dest.__dict__["ipv6"] = {}
+        from .devicetype import type_from_report
+
+        dest.__dict__["device_type"] = type_from_report({
+            "dns_queries": sorted(dest.dns_queries),
+            "destinations": [
+                {"domains": sorted(x.domains), "ports": sorted(x.ports)}
+                for x in dest.destinations.values()
+            ],
+            "open_ports": dest.open_ports,
+            "vendor": dest.vendor,
+        })
         dest.findings = findings_for(dest)
         dest.score, dest.grade = grade(dest.findings)
         dest.summary = summarize(dest)
@@ -233,7 +244,7 @@ def _dest_dict(d: Destination) -> dict:
 
 
 def to_dict(dev: Device) -> dict:
-    return {
+    d = {
         "ip": dev.ip,
         "mac": dev.mac,
         "vendor": dev.vendor,
@@ -258,3 +269,9 @@ def to_dict(dev: Device) -> dict:
         "bursts": dev.bursts,
         "ipv6": dev.__dict__.get("ipv6", {}),
     }
+    d["device_type"] = dev.__dict__.get("device_type")
+    if not d["device_type"]:
+        from .devicetype import type_from_report
+
+        d["device_type"] = type_from_report(d)
+    return d
