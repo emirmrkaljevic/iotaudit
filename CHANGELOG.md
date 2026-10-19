@@ -3,7 +3,7 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.2] - 2026-10-19
 
 ### Added
 - **`iotaudit web`**: a local web UI to view reports, upload a pcap (PCAPdroid supported) and
