@@ -23,9 +23,8 @@ It answers the questions you actually have about a cheap smart device:
 - **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN — and an honest note
   when a stream was set up but never actually passed through your computer.
 
-> Status: **0.1.1** on PyPI. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP,
-> device-type identification, grading, HTML report and the MCP server work. The local web UI is on
-> `main` (install from source) until the next release. CVE lookup and UPnP checks are on the [roadmap](ROADMAP.md).
+> Status: **0.1.2**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> identification, grading, HTML report, a local web UI and the MCP server work. CVE lookup and UPnP checks are on the [roadmap](ROADMAP.md).
 
 ## Sample report
 
