@@ -23,8 +23,9 @@ It answers the questions you actually have about a cheap smart device:
 - **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN — and an honest note
   when a stream was set up but never actually passed through your computer.
 
-> Status: **0.1.0**. Hotspot + ARP capture, pcap analysis, IPv6/NDP, grading, HTML report and the
-> MCP server work. CVE lookup and UPnP checks are on the [roadmap](ROADMAP.md).
+> Status: **0.1.1** on PyPI. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP,
+> device-type identification, grading, HTML report and the MCP server work. The local web UI is on
+> `main` (install from source) until the next release. CVE lookup and UPnP checks are on the [roadmap](ROADMAP.md).
 
 ## Sample report
 
@@ -103,6 +104,18 @@ link-local (`fe80::`). When that happens the report says so honestly:
 
 For ground truth, capture at the router instead. `--ipv6-ndp` (experimental) also NDP-spoofs IPv6
 link-local pairs.
+
+## Web UI and phones
+
+```bash
+iotaudit web                          # http://127.0.0.1:8765, token printed on start
+sudo "$(which iotaudit)" web --lan    # also from a phone on the same Wi-Fi (token required)
+```
+
+View reports, upload a pcap (including **PCAPdroid** captures from Android) and run a one-click
+scan & capture from the browser. Localhost by default; `--lan` is opt-in, token-protected and only
+answers private-range clients. iPhones can use the web UI but cannot capture on their own; see
+[docs/phones.md](docs/phones.md) for what works on Android and iOS and what does not.
 
 ## MCP server
 

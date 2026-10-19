@@ -3,6 +3,15 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **`iotaudit web`**: a local web UI to view reports, upload a pcap (PCAPdroid supported) and
+  run a one-click LAN scan + capture. Binds to `127.0.0.1` by default; `--lan` opts in to phone
+  access on the same Wi-Fi. Always token-protected, with Host/Origin checks, private-range
+  clients only in LAN mode, and an explicit consent box before capturing.
+- `docs/phones.md`: what works on Android (PCAPdroid) and the honest limits on iPhone.
+
 ## [0.1.1] - 2026-10-18
 
 ### Added
