@@ -171,6 +171,13 @@ def cmd_mcp(args) -> int:
     return 0
 
 
+def cmd_web(args) -> int:
+    from .web import serve
+
+    serve(port=args.port, lan=args.lan, token=args.token, reports_dir=args.reports_dir)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="iotaudit", description="Audit your own smart-home devices.")
     p.add_argument("--version", action="version", version=__version__)
@@ -215,6 +222,15 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("ip")
     s.add_argument("--i-own-this-network", action="store_true")
     s.set_defaults(func=cmd_scan)
+
+    w = sub.add_parser("web", help="local web UI: reports, scan/capture, pcap upload")
+    w.add_argument("--port", type=int, default=8765)
+    w.add_argument("--lan", action="store_true",
+                   help="also listen on your LAN so a phone on the same Wi-Fi can connect "
+                        "(token still required)")
+    w.add_argument("--token", help="access token (default: random, printed at start)")
+    w.add_argument("--reports-dir", default="iotaudit-reports")
+    w.set_defaults(func=cmd_web)
 
     m = sub.add_parser("mcp", help="run the MCP server (stdio)")
     m.set_defaults(func=cmd_mcp)
