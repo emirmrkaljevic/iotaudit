@@ -21,7 +21,7 @@ padding:.35rem;text-align:left;vertical-align:top}
 .chart .bar.idle{background:#a8c5a0}
 </style></head><body>
 <h1>iotaudit report</h1>
-<p class="muted">Generated 2026-10-17 10:16 &middot; iotaudit 0.1.0 &middot; source: arp:en0 (anonymized sample) &middot; capture 900s</p>
+<p class="muted">Generated 2026-10-20 10:03 &middot; iotaudit 0.1.2 &middot; source: arp:en0 (anonymized sample) &middot; capture 900s</p>
 <p class="muted">Findings are indicators based on observed traffic, not proof of wrongdoing by any vendor.
 All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
 
@@ -30,6 +30,9 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
   <h2>192.168.0.50</h2>
   <p class="muted">MAC 14:5d:34:00:00:01 &middot; SHENZHEN BILIAN ELECTRONIC
   &middot; profile: iotbing.com cloud device (Tuya-associated pet feeder / camera) &middot; score 55/100</p>
+  <p class="muted"><b>Looks like a Smart plug / bulb / switch</b>
+  <span class="tag">type confidence: low</span>
+  <br><span class="muted">why: domain ~iotbing -&gt; plug/bulb</span></p>
   <div class="summary"><b>Summary.</b> Device 192.168.0.50 (iotbing.com cloud device (Tuya-associated pet feeder / camera)). Grade D (55/100). Talked to: Amazon AWS, Google, OVH, iotbing (Tuya-associated cloud). Server countries observed: US. Telnet (port 23) is open on the LAN — change defaults / block it. Uses public DNS directly (bypasses your router). Used STUN/TURN (typical for P2P video setup). A P2P video session was set up but no media stream was captured here — it likely went straight to your phone over Wi-Fi (not observed). Uploads while app idle: insufficient data. 1 destination(s) look like custom/non-TLS encryption (unverified).</div>
   <p><b>Uploads while app idle:</b> insufficient data</p>
   <p class="muted"><b>IPv6:</b> 1 flow(s),
@@ -44,13 +47,13 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
   
     <li><span class="info">[info]</span> <b>STUN/TURN (P2P video setup)</b> &mdash; STUN/TURN to 15.204.72.48 (OVH) — typical for peer-to-peer video/audio; the media may stay on the LAN or go via a relay. <span class="tag">confidence: high</span></li>
   
-    <li><span class="medium">[medium]</span> <b>Hardcoded public DNS (bypasses router)</b> &mdash; Device sent DNS to 8.8.8.8, bypassing your router's DNS. Queries may leave your network even if you run Pi-hole.</li>
+    <li><span class="medium">[medium]</span> <b>Hardcoded public DNS (bypasses router)</b> &mdash; Device sent DNS to 8.8.8.8, bypassing your router&#39;s DNS. Queries may leave your network even if you run Pi-hole.</li>
   
     <li><span class="high">[high]</span> <b>Open port 23/tcp (telnet)</b> &mdash; Telnet exposes an unencrypted login shell.</li>
   
     <li><span class="info">[info]</span> <b>Cloud servers outside the local network</b> &mdash; Observed destination countries: US. This is a location note about servers the device contacted, not a judgement about where you live.</li>
   
-    <li><span class="info">[info]</span> <b>Odd "LAN peer" in special-use address space</b> &mdash; Saw traffic to/from 192.0.0.6 (3360B), which is reserved / protocol-assignment space (e.g. 192.0.0.0/24), not a real device on your Wi-Fi. It is almost always a placeholder/DS-Lite address or an address carried inside P2P/STUN signalling — not a second hidden gadget. <span class="tag">confidence: high</span></li>
+    <li><span class="info">[info]</span> <b>Odd &#34;LAN peer&#34; in special-use address space</b> &mdash; Saw traffic to/from 192.0.0.6 (3360B), which is reserved / protocol-assignment space (e.g. 192.0.0.0/24), not a real device on your Wi-Fi. It is almost always a placeholder/DS-Lite address or an address carried inside P2P/STUN signalling — not a second hidden gadget. <span class="tag">confidence: high</span></li>
   
     <li><span class="info">[info]</span> <b>LAN discovery broadcasts</b> &mdash; 48000 bytes of broadcast/multicast (e.g. Tuya UDP 6667) — not media.</li>
   
