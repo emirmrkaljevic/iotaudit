@@ -19,12 +19,15 @@ It answers the questions you actually have about a cheap smart device:
 - **Who does it talk to?** Domains (DNS + TLS SNI + HTTP Host), IPs, country, organisation.
 - **Is it encrypted?** Plaintext HTTP, unencrypted TCP, old TLS, or "custom" high-entropy protocols.
 - **What ports are open?** Optional `nmap` scan with risk notes (telnet, RTSP, UPnP, ADB, …).
+- **Is it reachable from the internet?** Lists the port forwards your router opened via UPnP
+  and which device they point to (read-only, never changes the router).
 - **Does it phone home while idle?** Idle-upload check and a traffic timeline with bursts.
 - **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN — and an honest note
   when a stream was set up but never actually passed through your computer.
 
-> Status: **0.1.2**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
-> identification, grading, HTML report, a local web UI and the MCP server work. CVE lookup and UPnP checks are on the [roadmap](ROADMAP.md).
+> Status: **0.1.3**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> identification, UPnP port-forward audit, grading, HTML report, a local web UI and the MCP server
+> work. CVE hints and default-credential checks are on the [roadmap](ROADMAP.md).
 
 ## Sample report
 
@@ -103,6 +106,18 @@ link-local (`fe80::`). When that happens the report says so honestly:
 
 For ground truth, capture at the router instead. `--ipv6-ndp` (experimental) also NDP-spoofs IPv6
 link-local pairs.
+
+## Router port forwards (UPnP)
+
+```bash
+iotaudit upnp          # or --json
+```
+
+Many devices quietly ask the router to open a public port to themselves. `iotaudit upnp` lists
+every UPnP port forward and the LAN device it points to. It only sends the two read-only UPnP
+queries, and only to a router on a private address. It also runs after each `capture` (skip with
+`--no-upnp`) and adds a finding when a forward points at the audited device. If nothing answers,
+UPnP is off on your router, which is the safest setting.
 
 ## Web UI and phones
 
