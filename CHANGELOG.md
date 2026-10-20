@@ -3,6 +3,21 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.3] - 2026-10-20
+
+### Added
+- **`iotaudit upnp`**: read-only UPnP IGD audit listing the port forwards your router opened and
+  the device each one points to. Runs after `capture` by default (`--no-upnp` to skip; opt-in
+  with `--upnp` for `analyze`) and adds a finding for forwards to the audited device. Only
+  `GetExternalIPAddress` / `GetGenericPortMappingEntry` are sent, only to private/loopback router
+  URLs. Also available as the MCP tool `upnp_port_mappings`.
+
+### Fixed
+- The HTML report is now always escaped. Autoescaping did not apply to `report.html.j2`, so
+  names taken from the network (SNI, DNS, hostnames) were inserted unescaped; a crafted name
+  could inject markup into a report opened from disk. Reports served by `iotaudit web` were
+  already protected by a no-script CSP.
+
 ## [0.1.2] - 2026-10-19
 
 ### Added

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "iotaudit"
-version = "0.1.2"
+version = "0.1.3"
 description = "Audit your own smart-home devices: who they talk to, plaintext vs TLS, open ports, and an A-F grade with an HTML report."
 readme = "README.md"
 license = "MIT"
