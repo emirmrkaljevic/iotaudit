@@ -119,6 +119,7 @@ def build_devices(
     extra_profiles: str | None = None,
     scans: dict[str, list] | None = None,
     peer_labels: dict[str, str] | None = None,
+    upnp: dict | None = None,
 ) -> list[Device]:
     geo = geo or Geo()
     profiles = load_profiles(extra_profiles)
@@ -202,6 +203,10 @@ def build_devices(
             "vendor": dest.vendor,
         })
         dest.findings = findings_for(dest)
+        if upnp:
+            from .upnp import findings_for_device
+
+            dest.findings += findings_for_device(dest.ip, upnp)
         dest.score, dest.grade = grade(dest.findings)
         dest.summary = summarize(dest)
 

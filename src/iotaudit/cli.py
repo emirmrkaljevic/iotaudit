@@ -13,6 +13,7 @@ from .capture import Collector, build_bpf, from_pcap, live
 from .consent import require_consent
 from .enrich import Geo
 from .report import render_html
+from .upnp import RISKY_PORTS as RISKY
 
 
 def _finish(col, args, meta) -> int:
@@ -23,9 +24,20 @@ def _finish(col, args, meta) -> int:
         for ip in (args.device or []):
             print(f"Scanning {ip} with nmap...", file=sys.stderr)
             scans[ip] = nmap_scan(ip)
+    upnp = None
+    if getattr(args, "upnp", False):
+        from .upnp import audit
+
+        print("Listing UPnP port forwards on the router (read-only)...", file=sys.stderr)
+        try:
+            upnp = audit()
+        except OSError as e:
+            print(f"UPnP check skipped: {e}", file=sys.stderr)
+        if upnp is not None:
+            meta = {**meta, "upnp": _upnp_line(upnp)}
     peer_labels = getattr(args, "_peer_labels", None) or {}
     devices = [to_dict(d) for d in build_devices(
-        col, Geo(args.geoip), args.profiles, scans, peer_labels=peer_labels)]
+        col, Geo(args.geoip), args.profiles, scans, peer_labels=peer_labels, upnp=upnp)]
     json_path = args.json or str(Path(args.out).with_suffix(".json"))
     Path(json_path).write_text(json.dumps(devices, indent=2))
     out = Path(args.out)
@@ -150,6 +162,37 @@ def cmd_capture(args) -> int:
     return _finish(col, args, {"source": f"{args.mode}:{iface}", "duration": args.duration})
 
 
+def _upnp_line(u: dict) -> str:
+    if not u["routers"]:
+        return "no UPnP IGD answered (UPnP off, or blocked)"
+    return (f"{len(u['routers'])} UPnP router(s), {len(u['mappings'])} port forward(s) open"
+            + (f"; errors: {'; '.join(u['errors'])}" if u["errors"] else ""))
+
+
+def cmd_upnp(args) -> int:
+    from .upnp import audit
+
+    u = audit(timeout=args.timeout)
+    if args.json:
+        print(json.dumps(u, indent=2))
+        return 0
+    if not u["routers"]:
+        print("No UPnP Internet Gateway answered. Either UPnP is off on your router (good) "
+              "or multicast is blocked on this network.")
+    for r in u["routers"]:
+        print(f"Router: {r.get('name') or '?'} {r.get('model') or ''} "
+              f"(external IP {r.get('external_ip') or 'unknown'})")
+    if u["routers"] and not u["mappings"]:
+        print("UPnP is on, but no port forwards are open right now.")
+    for m in u["mappings"]:
+        flag = " <- risky" if m["internal_port"] in RISKY or m["external_port"] in RISKY else ""
+        print(f"  {m['protocol']:<3} public :{m['external_port']:<5} -> "
+              f"{m['internal_client']}:{m['internal_port']:<5} {m['description']!r}{flag}")
+    for e in u["errors"]:
+        print(f"error: {e}", file=sys.stderr)
+    return 0
+
+
 def cmd_analyze(args) -> int:
     col = from_pcap(args.pcap, Collector(args.device))
     return _finish(col, args, {"source": args.pcap})
@@ -191,6 +234,9 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--profiles", help="extra directory of device profile YAML files")
         sp.add_argument("--scan", action=argparse.BooleanOptionalAction, default=True,
                        help="nmap-scan each --device after capture (default: on; --no-scan to skip)")
+        sp.add_argument("--upnp", action=argparse.BooleanOptionalAction, default=False,
+                        help="list router UPnP port forwards to the device (read-only; "
+                             "default on for capture, off for analyze)")
 
     c = sub.add_parser("capture", help="live capture (hotspot recommended)")
     c.add_argument("--mode", choices=["hotspot", "iface", "arp"], default="hotspot",
@@ -211,7 +257,7 @@ def build_parser() -> argparse.ArgumentParser:
                         "IPv6 unicast is visible (ARP-mode only)")
     c.add_argument("--i-own-this-network", action="store_true")
     common(c)
-    c.set_defaults(func=cmd_capture)
+    c.set_defaults(func=cmd_capture, upnp=True)
 
     a = sub.add_parser("analyze", help="analyse an existing pcap")
     a.add_argument("pcap")
@@ -222,6 +268,11 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("ip")
     s.add_argument("--i-own-this-network", action="store_true")
     s.set_defaults(func=cmd_scan)
+
+    u = sub.add_parser("upnp", help="list port forwards your router opened via UPnP (read-only)")
+    u.add_argument("--timeout", type=float, default=3.0)
+    u.add_argument("--json", action="store_true")
+    u.set_defaults(func=cmd_upnp)
 
     w = sub.add_parser("web", help="local web UI: reports, scan/capture, pcap upload")
     w.add_argument("--port", type=int, default=8765)

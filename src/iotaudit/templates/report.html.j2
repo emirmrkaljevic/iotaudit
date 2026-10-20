@@ -21,7 +21,7 @@ padding:.35rem;text-align:left;vertical-align:top}
 .chart .bar.idle{background:#a8c5a0}
 </style></head><body>
 <h1>iotaudit report</h1>
-<p class="muted">Generated {{ generated }} &middot; iotaudit {{ version }}{% if meta.source %} &middot; source: {{ meta.source }}{% endif %}{% if meta.duration %} &middot; capture {{ meta.duration }}s{% endif %}</p>
+<p class="muted">Generated {{ generated }} &middot; iotaudit {{ version }}{% if meta.source %} &middot; source: {{ meta.source }}{% endif %}{% if meta.duration %} &middot; capture {{ meta.duration }}s{% endif %}{% if meta.upnp %} &middot; UPnP: {{ meta.upnp }}{% endif %}</p>
 <p class="muted">Findings are indicators based on observed traffic, not proof of wrongdoing by any vendor.
 All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
 {% for d in devices %}

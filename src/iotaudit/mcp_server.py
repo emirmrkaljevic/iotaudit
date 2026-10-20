@@ -46,6 +46,14 @@ def create_server():
 
         return nmap_scan(ip)
 
+    @mcp.tool()
+    def upnp_port_mappings() -> dict:
+        """List the port forwards the LAN router opened via UPnP IGD (read-only: never adds or
+        removes a mapping). Shows which devices are reachable from the internet."""
+        from .upnp import audit
+
+        return audit()
+
     return mcp
 
 
