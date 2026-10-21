@@ -47,6 +47,20 @@ def create_server():
         return nmap_scan(ip)
 
     @mcp.tool()
+    def default_credential_check(ip: str, services: list[str] | None = None,
+                                 i_own_this_device: bool = False) -> list[dict]:
+        """Opt-in check whether one LAN device you own still accepts a well-known default login
+        (telnet/http/ftp). Rate-limited, never brute-forces, stops at the first accepted login,
+        and reports only accepted/not-accepted. Set i_own_this_device=true only after the user
+        confirms they own this exact device."""
+        from .credcheck import check_device
+
+        if not i_own_this_device:
+            raise ValueError("User must confirm they own this device.")
+        results = check_device(ip, services or ["telnet"], confirmed=True)
+        return [r.as_finding() for r in results]
+
+    @mcp.tool()
     def upnp_port_mappings() -> dict:
         """List the port forwards the LAN router opened via UPnP IGD (read-only: never adds or
         removes a mapping). Shows which devices are reachable from the internet."""
