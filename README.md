@@ -39,6 +39,13 @@ on this run, and shows an odd **special-use "LAN peer"** that is not a real devi
 
 Open [`docs/sample-report.html`](docs/sample-report.html) in a browser for the full version.
 
+## Demo
+
+A short walk-through of a capture, the UPnP port-forward check and the opt-in default-password
+check (animated SVG, no audio, no tracking):
+
+![iotaudit terminal demo](docs/demo.svg)
+
 ## Install
 
 ```bash
