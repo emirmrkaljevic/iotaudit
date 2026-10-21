@@ -73,8 +73,8 @@ Plain-English per-device findings such as:
 ## v0.4 – Security checks
 
 - CVEs per vendor/model/firmware: banner + profile → OSV / NVD / CISA KEV (cached locally)
-- Default credentials: short vendor-default list, only on a user-confirmed own device, rate-limited,
-  never brute force
+- [x] Default credentials: short vendor-default list, only on a user-confirmed own device,
+  rate-limited, never brute force (0.1.4, `iotaudit credcheck`)
 - [x] UPnP IGD: list port forwards on your router and attribute them to devices (0.1.3, read-only)
 - DNS bypass: hardcoded resolvers (8.8.8.8 etc.), DNS-over-HTTPS / DoT endpoints
 - Device scanning your LAN (ARP sweeps, port probes from the IoT device)

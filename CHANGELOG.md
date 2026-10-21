@@ -3,6 +3,15 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.4] - 2026-10-21
+
+### Added
+- **`iotaudit credcheck`**: opt-in default-credential check for one device you own. Gated behind
+  a typed per-IP confirmation, it tries only a short list of documented vendor default logins
+  (telnet/http/ftp), never a wordlist; it is rate-limited, stops at the first accepted login, and
+  reports only "default login accepted" (high) or "not accepted" (info). LAN addresses only. Also
+  exposed as the MCP tool `default_credential_check`.
+
 ## [0.1.3] - 2026-10-20
 
 ### Added
