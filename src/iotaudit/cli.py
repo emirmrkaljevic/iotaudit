@@ -169,6 +169,45 @@ def _upnp_line(u: dict) -> str:
             + (f"; errors: {'; '.join(u['errors'])}" if u["errors"] else ""))
 
 
+def cmd_credcheck(args) -> int:
+    from .credcheck import CONFIRM_TEMPLATE, SERVICES, check_device, is_lan_target
+
+    ip = args.ip
+    if not is_lan_target(ip):
+        print(f"{ip} is not a private/LAN address; refusing.", file=sys.stderr)
+        return 2
+    services = args.service or ["telnet"]
+    for svc in services:
+        if svc not in SERVICES:
+            print(f"unknown service {svc!r} (choose from {', '.join(SERVICES)})", file=sys.stderr)
+            return 2
+    phrase = CONFIRM_TEMPLATE.format(ip=ip)
+    confirmed = args.yes
+    if not confirmed:
+        print("This will attempt a short list of well-known DEFAULT logins against "
+              f"{', '.join(services)} on {ip}.", file=sys.stderr)
+        print("Only do this on a device you own. It is rate-limited and never brute-forces.",
+              file=sys.stderr)
+        print(f'Type exactly: {phrase}', file=sys.stderr)
+        try:
+            answer = sys.stdin.readline().strip()
+        except (EOFError, KeyboardInterrupt):
+            answer = ""
+        confirmed = answer == phrase
+    if not confirmed:
+        print("Confirmation phrase not entered; aborting.", file=sys.stderr)
+        return 2
+    results = check_device(ip, services, confirmed=True)
+    out = [r.as_finding() for r in results]
+    if args.json:
+        print(json.dumps(out, indent=2))
+    else:
+        for r in results:
+            f = r.as_finding()
+            print(f"[{f['severity']}] {f['title']} - {f['detail']}")
+    return 1 if any(r.accepted for r in results) else 0
+
+
 def cmd_upnp(args) -> int:
     from .upnp import audit
 
@@ -268,6 +307,16 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("ip")
     s.add_argument("--i-own-this-network", action="store_true")
     s.set_defaults(func=cmd_scan)
+
+    cc = sub.add_parser("credcheck",
+                        help="opt-in default-password check on one device you own (active login)")
+    cc.add_argument("ip")
+    cc.add_argument("--service", action="append", choices=["telnet", "http", "ftp"],
+                    help="service to test (repeatable; default: telnet)")
+    cc.add_argument("--yes", action="store_true",
+                    help="skip the typed confirmation prompt (scripted use; you still own it)")
+    cc.add_argument("--json", action="store_true")
+    cc.set_defaults(func=cmd_credcheck)
 
     u = sub.add_parser("upnp", help="list port forwards your router opened via UPnP (read-only)")
     u.add_argument("--timeout", type=float, default=3.0)
