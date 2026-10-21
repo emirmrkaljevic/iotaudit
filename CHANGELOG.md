@@ -66,7 +66,7 @@ does on the network and gives it an A–F grade with a one-page HTML report.
   Experimental `--ipv6-ndp` additionally NDP-spoofs IPv6 link-local pairs.
 - **Honest "media not observed" note**: when a device sets up a P2P session (STUN/TURN) but no
   sustained media stream is captured on the LAN, over IPv6 or to the cloud, the report says so
-  plainly — the video most likely went straight to your phone over Wi-Fi and was not observed.
+  plainly: the video most likely went straight to your phone over Wi-Fi and was not observed.
 - **Special-use / bogon peers**: addresses like `192.0.0.0/24` are no longer mistaken for real
   Wi-Fi devices; they are flagged as placeholder / DS-Lite / P2P-signalling artifacts.
 - **Analysis**: per-destination org/country (bundled DB-IP + ip2asn-lite, offline), plaintext

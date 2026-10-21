@@ -22,7 +22,7 @@ It answers the questions you actually have about a cheap smart device:
 - **Is it reachable from the internet?** Lists the port forwards your router opened via UPnP
   and which device they point to (read-only, never changes the router).
 - **Does it phone home while idle?** Idle-upload check and a traffic timeline with bursts.
-- **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN — and an honest note
+- **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN, and an honest note
   when a stream was set up but never actually passed through your computer.
 
 > Status: **0.1.4**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
@@ -101,14 +101,14 @@ The report lands at `./iotaudit-report.html` with a matching `.json` next to it.
 
 ## IPv6, P2P video, and "not observed"
 
-Live video from a camera or feeder often does **not** go to the cloud — it goes **directly to your
+Live video from a camera or feeder often does **not** go to the cloud: it goes **directly to your
 phone** over the local Wi-Fi (P2P), after a short STUN/TURN handshake. iotaudit tries hard to see
 that stream (`--watch-lan` spoofs device↔phone, and the capture filter now includes IPv6 and NDP),
-but two Wi-Fi clients can talk **without their traffic ever passing through your computer** —
+but two Wi-Fi clients can talk **without their traffic ever passing through your computer**.
 because of Access-Point client isolation, a phone ignoring the spoof, or the stream riding IPv6
 link-local (`fe80::`). When that happens the report says so honestly:
 
-> *Live video set up but not observed here* — the session was negotiated (STUN) but no sustained
+> *Live video set up but not observed here*: the session was negotiated (STUN) but no sustained
 > stream was captured; it most likely went straight to your phone. **Not observed ≠ not happening.**
 
 For ground truth, capture at the router instead. `--ipv6-ndp` (experimental) also NDP-spoofs IPv6
@@ -125,7 +125,7 @@ The one active login iotaudit makes, and only when you ask for it. It tries a sh
 documented **vendor default** credentials (e.g. the `root`/`xc3511` that the Mirai-era cameras
 shipped with), never a password wordlist. You confirm the exact IP by typing a phrase, it only
 targets a LAN address, it waits between attempts, stops at the first login that works, and reports
-just **"default login accepted"** or **"not accepted"** — it never keeps or uses the session. Use
+just **"default login accepted"** or **"not accepted"**; it never keeps or uses the session. Use
 it on your own devices only.
 
 ## Router port forwards (UPnP)

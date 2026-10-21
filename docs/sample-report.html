@@ -33,7 +33,7 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
   <p class="muted"><b>Looks like a Smart plug / bulb / switch</b>
   <span class="tag">type confidence: low</span>
   <br><span class="muted">why: domain ~iotbing -&gt; plug/bulb</span></p>
-  <div class="summary"><b>Summary.</b> Device 192.168.0.50 (iotbing.com cloud device (Tuya-associated pet feeder / camera)). Grade D (55/100). Talked to: Amazon AWS, Google, OVH, iotbing (Tuya-associated cloud). Server countries observed: US. Telnet (port 23) is open on the LAN — change defaults / block it. Uses public DNS directly (bypasses your router). Used STUN/TURN (typical for P2P video setup). A P2P video session was set up but no media stream was captured here — it likely went straight to your phone over Wi-Fi (not observed). Uploads while app idle: insufficient data. 1 destination(s) look like custom/non-TLS encryption (unverified).</div>
+  <div class="summary"><b>Summary.</b> Device 192.168.0.50 (iotbing.com cloud device (Tuya-associated pet feeder / camera)). Grade D (55/100). Talked to: Amazon AWS, Google, OVH, iotbing (Tuya-associated cloud). Server countries observed: US. Telnet (port 23) is open on the LAN: change defaults / block it. Uses public DNS directly (bypasses your router). Used STUN/TURN (typical for P2P video setup). A P2P video session was set up but no media stream was captured here: it likely went straight to your phone over Wi-Fi (not observed). Uploads while app idle: insufficient data. 1 destination(s) look like custom/non-TLS encryption (unverified).</div>
   <p><b>Uploads while app idle:</b> insufficient data</p>
   <p class="muted"><b>IPv6:</b> 1 flow(s),
   168 bytes (168 on link-local fe80::); NDP messages:
@@ -43,28 +43,28 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
   
   <h3>Findings</h3>
   <ul>
-    <li><span class="medium">[medium]</span> <b>Non-standard encryption (custom protocol), unverified</b> &mdash; Traffic to 15.204.79.232 (ports [1443]) looks encrypted by entropy but is not TLS. High entropy (8.00) without TLS handshake — non-standard encryption (custom protocol), unverified. <span class="tag">confidence: medium</span></li>
+    <li><span class="medium">[medium]</span> <b>Non-standard encryption (custom protocol), unverified</b>  -  Traffic to 15.204.79.232 (ports [1443]) looks encrypted by entropy but is not TLS. High entropy (8.00) without TLS handshake: non-standard encryption (custom protocol), unverified. <span class="tag">confidence: medium</span></li>
   
-    <li><span class="info">[info]</span> <b>STUN/TURN (P2P video setup)</b> &mdash; STUN/TURN to 15.204.72.48 (OVH) — typical for peer-to-peer video/audio; the media may stay on the LAN or go via a relay. <span class="tag">confidence: high</span></li>
+    <li><span class="info">[info]</span> <b>STUN/TURN (P2P video setup)</b>  -  STUN/TURN to 15.204.72.48 (OVH), typical for peer-to-peer video/audio; the media may stay on the LAN or go via a relay. <span class="tag">confidence: high</span></li>
   
-    <li><span class="medium">[medium]</span> <b>Hardcoded public DNS (bypasses router)</b> &mdash; Device sent DNS to 8.8.8.8, bypassing your router&#39;s DNS. Queries may leave your network even if you run Pi-hole.</li>
+    <li><span class="medium">[medium]</span> <b>Hardcoded public DNS (bypasses router)</b>  -  Device sent DNS to 8.8.8.8, bypassing your router&#39;s DNS. Queries may leave your network even if you run Pi-hole.</li>
   
-    <li><span class="high">[high]</span> <b>Open port 23/tcp (telnet)</b> &mdash; Telnet exposes an unencrypted login shell.</li>
+    <li><span class="high">[high]</span> <b>Open port 23/tcp (telnet)</b>  -  Telnet exposes an unencrypted login shell.</li>
   
-    <li><span class="info">[info]</span> <b>Cloud servers outside the local network</b> &mdash; Observed destination countries: US. This is a location note about servers the device contacted, not a judgement about where you live.</li>
+    <li><span class="info">[info]</span> <b>Cloud servers outside the local network</b>  -  Observed destination countries: US. This is a location note about servers the device contacted, not a judgement about where you live.</li>
   
-    <li><span class="info">[info]</span> <b>Odd &#34;LAN peer&#34; in special-use address space</b> &mdash; Saw traffic to/from 192.0.0.6 (3360B), which is reserved / protocol-assignment space (e.g. 192.0.0.0/24), not a real device on your Wi-Fi. It is almost always a placeholder/DS-Lite address or an address carried inside P2P/STUN signalling — not a second hidden gadget. <span class="tag">confidence: high</span></li>
+    <li><span class="info">[info]</span> <b>Odd &#34;LAN peer&#34; in special-use address space</b>  -  Saw traffic to/from 192.0.0.6 (3360B), which is reserved / protocol-assignment space (e.g. 192.0.0.0/24), not a real device on your Wi-Fi. It is almost always a placeholder/DS-Lite address or an address carried inside P2P/STUN signalling, not a second hidden gadget. <span class="tag">confidence: high</span></li>
   
-    <li><span class="info">[info]</span> <b>LAN discovery broadcasts</b> &mdash; 48000 bytes of broadcast/multicast (e.g. Tuya UDP 6667) — not media.</li>
+    <li><span class="info">[info]</span> <b>LAN discovery broadcasts</b>  -  48000 bytes of broadcast/multicast (e.g. Tuya UDP 6667), not media.</li>
   
-    <li><span class="info">[info]</span> <b>Live video set up but not observed here</b> &mdash; The device negotiated a peer-to-peer session (STUN/TURN) but no sustained video/audio stream was captured on this run. It most likely went directly between the device and your phone over Wi-Fi (P2P) and never passed through this computer: two Wi-Fi clients can talk without their traffic crossing your Mac, and spoofed ARP/NDP may not redirect it (client isolation, or the phone ignoring the spoof). IPv6 was active (NDP messages: 2, IPv6 flows seen: 1), so the stream may be riding IPv6 link-local between the two devices. Not observed does not mean it did not happen — re-run with the app streaming, or capture at the router. <span class="tag">confidence: high</span></li>
+    <li><span class="info">[info]</span> <b>Live video set up but not observed here</b>  -  The device negotiated a peer-to-peer session (STUN/TURN) but no sustained video/audio stream was captured on this run. It most likely went directly between the device and your phone over Wi-Fi (P2P) and never passed through this computer: two Wi-Fi clients can talk without their traffic crossing your Mac, and spoofed ARP/NDP may not redirect it (client isolation, or the phone ignoring the spoof). IPv6 was active (NDP messages: 2, IPv6 flows seen: 1), so the stream may be riding IPv6 link-local between the two devices. Not observed does not mean it did not happen. Re-run with the app streaming, or capture at the router. <span class="tag">confidence: high</span></li>
   
-    <li><span class="info">[info]</span> <b>IPv6 traffic observed</b> &mdash; 1 IPv6 flow(s), 168 bytes (168 on link-local fe80::); NDP neighbor-discovery messages: 2. IPv6 enrichment (country/org) is limited; link-local P2P between two Wi-Fi clients may not be fully capturable without router-side capture.</li>
+    <li><span class="info">[info]</span> <b>IPv6 traffic observed</b>  -  1 IPv6 flow(s), 168 bytes (168 on link-local fe80::); NDP neighbor-discovery messages: 2. IPv6 enrichment (country/org) is limited; link-local P2P between two Wi-Fi clients may not be fully capturable without router-side capture.</li>
   </ul>
   <h3>Internet destinations</h3>
   <table><tr><th>Domain(s)</th><th>IP</th><th>Country</th><th>Organisation</th><th>Ports / proto</th><th>Bytes</th><th>Encryption</th><th>Class</th></tr>
   <tr>
-    <td>—</td>
+    <td>-</td>
     <td>15.204.79.232</td><td>US</td><td>OVH</td>
     <td>1443 (custom-1443)</td>
     <td>72000 out / 72000 in</td>
@@ -72,16 +72,16 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
         
         
     </td>
-    <td>—</td>
+    <td>-</td>
   </tr><tr>
-    <td>—</td>
+    <td>-</td>
     <td>52.32.71.30</td><td>US</td><td>Amazon AWS</td>
     <td>8883 (MQTT-over-TLS)</td>
     <td>23000 out / 23000 in</td>
     <td>TLS/encrypted
         
     </td>
-    <td>—</td>
+    <td>-</td>
   </tr><tr>
     <td>a1-us.iotbing.com</td>
     <td>35.155.252.83</td><td>US</td><td>iotbing (Tuya-associated cloud)</td>
@@ -90,9 +90,9 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
     <td>TLS/encrypted
         
     </td>
-    <td>—</td>
+    <td>-</td>
   </tr><tr>
-    <td>—</td>
+    <td>-</td>
     <td>15.204.72.48</td><td>US</td><td>OVH</td>
     <td>3478 (STUN/TURN)</td>
     <td>4000 out / 4000 in</td>
@@ -100,20 +100,20 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
         
         
     </td>
-    <td>—</td>
+    <td>-</td>
   </tr><tr>
-    <td>—</td>
+    <td>-</td>
     <td>8.8.8.8</td><td>US</td><td>Google</td>
     <td>53 (DNS)</td>
     <td>200 out / 0 in</td>
     <td>TLS/encrypted
         
     </td>
-    <td>—</td>
+    <td>-</td>
   </tr>
   </table>
   
-  <h3>LAN peers (same Wi-Fi — often phone P2P video)</h3>
+  <h3>LAN peers (same Wi-Fi, often phone P2P video)</h3>
   <table><tr><th>IP</th><th>Ports</th><th>Bytes</th><th>Class</th></tr>
   <tr>
     <td>192.0.0.6 <span class="tag">special-use / not a real device</span></td>
