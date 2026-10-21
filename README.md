@@ -25,9 +25,9 @@ It answers the questions you actually have about a cheap smart device:
 - **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN — and an honest note
   when a stream was set up but never actually passed through your computer.
 
-> Status: **0.1.3**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
-> identification, UPnP port-forward audit, grading, HTML report, a local web UI and the MCP server
-> work. CVE hints and default-credential checks are on the [roadmap](ROADMAP.md).
+> Status: **0.1.4**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> identification, UPnP port-forward audit, an opt-in default-password check, grading, HTML report,
+> a local web UI and the MCP server work. Offline CVE hints are on the [roadmap](ROADMAP.md).
 
 ## Sample report
 
@@ -106,6 +106,20 @@ link-local (`fe80::`). When that happens the report says so honestly:
 
 For ground truth, capture at the router instead. `--ipv6-ndp` (experimental) also NDP-spoofs IPv6
 link-local pairs.
+
+## Default-password check (opt-in)
+
+```bash
+iotaudit credcheck 192.168.0.50                 # telnet by default
+iotaudit credcheck 192.168.0.50 --service telnet --service http
+```
+
+The one active login iotaudit makes, and only when you ask for it. It tries a short list of
+documented **vendor default** credentials (e.g. the `root`/`xc3511` that the Mirai-era cameras
+shipped with), never a password wordlist. You confirm the exact IP by typing a phrase, it only
+targets a LAN address, it waits between attempts, stops at the first login that works, and reports
+just **"default login accepted"** or **"not accepted"** — it never keeps or uses the session. Use
+it on your own devices only.
 
 ## Router port forwards (UPnP)
 
