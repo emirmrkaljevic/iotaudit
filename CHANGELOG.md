@@ -3,6 +3,21 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.5] - 2026-10-22
+
+### Added
+- **Per-device destination countries** in the HTML report and in the device JSON
+  (`destination_countries`). Each country is an observed fact: a local lookup of an IP
+  the device contacted, with destination and byte counts. Confidence is certain.
+- **Traffic-pattern confidence** for video, audio, telemetry, and unknown. The report,
+  the plain-English findings, and `traffic_patterns` in the device JSON word each match
+  as an indicator with low, medium, or high confidence. A pattern match is not proof of
+  what was sent.
+
+### Changed
+- User-facing sentences (findings, report text, and related detail) no longer use em dashes.
+  They use commas, periods, or parentheses.
+
 ## [0.1.4] - 2026-10-21
 
 ### Added

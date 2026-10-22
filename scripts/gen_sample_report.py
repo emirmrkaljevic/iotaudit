@@ -20,6 +20,12 @@ DMAC = "14:5d:34:00:00:01"      # Bilian OUI kept, device bytes zeroed (anonymiz
 PMAC = "a4:30:7a:00:00:02"      # Samsung OUI (phone), anonymized
 
 
+def _series(nbytes: int, start: int = 1_700_000_000, buckets: int = 90) -> dict[int, int]:
+    """Spread bytes over a 15 minute window so bitrate heuristics have a real duration."""
+    per = max(1, nbytes // buckets)
+    return {start + i * 10: per for i in range(buckets)}
+
+
 def collector() -> Collector:
     col = Collector([DEV])
     col.macs[DEV] = DMAC
@@ -37,9 +43,12 @@ def collector() -> Collector:
                  packets=max(1, nbytes // 100), packets_in=max(1, nbytes // 100), tls=tls)
         if sample:
             f.payload_samples = [sample]
+        f.series = _series(nbytes)
         col.flows[(f.src, f.dst, f.dport, f.proto)] = f
     # Public DNS bypassing the router.
-    col.flows[(DEV, "8.8.8.8", 53, "udp")] = Flow(DEV, "8.8.8.8", 53, "udp", bytes=200, packets=4)
+    dns = Flow(DEV, "8.8.8.8", 53, "udp", bytes=200, packets=4)
+    dns.series = _series(200)
+    col.flows[(dns.src, dns.dst, dns.dport, dns.proto)] = dns
     # Tuya discovery broadcast (separate from peers).
     bc = Flow(DEV, "255.255.255.255", 6667, "udp", bytes=48000, packets=220, lan=True)
     col.lan_flows[(bc.src, bc.dst, bc.dport, bc.proto)] = bc

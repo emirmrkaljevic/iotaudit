@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .enrich import PUBLIC_DNS, is_cgnat, is_special_use
+from .traffic import PATTERN_DISPLAY
 
 PENALTY = {"high": 25, "medium": 10, "low": 4, "info": 0}
 # Telnet is especially bad (already high, 25); keep an explicit weight note in the finding.
@@ -22,7 +23,141 @@ CATEGORY_BY_TITLE = {
     "LAN peer": "traffic-class",
     "MQTT cloud": "destination",
     "Limited": "coverage",
+    "Traffic pattern": "traffic-class",
 }
+
+# Pattern inference is never an observed fact, so "certain" is not a valid rank here.
+_CONF_RANK = {"low": 1, "medium": 2, "high": 3}
+
+
+# p2p-setup stays in the summary block only. The STUN/TURN finding already covers it,
+# and calling it media would overclaim.
+_PATTERN_FINDING_LABELS = ("video", "audio", "audio+video", "telemetry", "unknown")
+
+
+def destination_country_summary(destinations) -> tuple[list[dict], int]:
+    """Group internet destinations by country.
+
+    Country comes from a local lookup of an IP the device contacted, so each
+    row is an observed fact (confidence "certain"). Destinations with no
+    country are counted and not given a guessed country.
+    """
+    buckets: dict[str, dict] = {}
+    unresolved = 0
+    for d in destinations:
+        country = getattr(d, "country", None)
+        if not country:
+            unresolved += 1
+            continue
+        row = buckets.get(country)
+        if row is None:
+            row = {
+                "country": country,
+                "destinations": 0,
+                "bytes_out": 0,
+                "bytes_in": 0,
+                "orgs": [],
+                "confidence": "certain",
+                "kind": "observed",
+            }
+            buckets[country] = row
+        row["destinations"] += 1
+        row["bytes_out"] += int(getattr(d, "bytes_out", 0) or 0)
+        row["bytes_in"] += int(getattr(d, "bytes_in", 0) or 0)
+        org = getattr(d, "org", None)
+        if org and org not in row["orgs"]:
+            row["orgs"].append(org)
+    rows = sorted(buckets.values(), key=lambda r: (-r["bytes_out"], r["country"]))
+    for row in rows:
+        row["orgs"] = sorted(row["orgs"])
+    return rows, unresolved
+
+
+def _tc_detail(dest) -> str | None:
+    return dest.__dict__.get("_tc_detail") or None
+
+
+def _pattern_sentence(label: str, where: str, count: int, confidence: str, mixed: bool) -> str:
+    display = PATTERN_DISPLAY.get(label, label)
+    conf = (
+        f"Strongest confidence: {confidence}."
+        if mixed
+        else f"Confidence: {confidence}."
+    )
+    return (
+        f"Pattern looks like {display} ({where}, {count} destination(s)). "
+        f"{conf} Indicator only, not proof of what was sent."
+    )
+
+
+def traffic_pattern_summary(destinations, lan_peers=None) -> list[dict]:
+    """Roll up inferred traffic classes for one device.
+
+    Each row is an indicator (video, audio, telemetry, unknown, and so on)
+    with low, medium, or high confidence. Special-use peers are skipped
+    because they are not real devices on the Wi-Fi. Confidence is never
+    "certain": a pattern match is not an observed fact.
+    """
+    groups: dict[tuple[str, str], dict] = {}
+
+    def add(dest, where: str) -> None:
+        if where == "lan" and (
+            dest.__dict__.get("special_use") or is_special_use(getattr(dest, "ip", "") or "")
+        ):
+            return
+        tc = getattr(dest, "traffic_class", None)
+        label = getattr(tc, "label", None)
+        if not label:
+            return
+        conf = getattr(tc, "confidence", None) or "low"
+        # A pattern is an indicator. Never publish it as an observed fact.
+        if conf == "certain":
+            conf = "high"
+        elif conf not in _CONF_RANK:
+            conf = "low"
+        key = (where, label)
+        row = groups.get(key)
+        if row is None:
+            row = {
+                "label": label,
+                "display": PATTERN_DISPLAY.get(label, label),
+                "where": where,
+                "confidence": conf,
+                "confidences": {conf},
+                "destinations": 0,
+                "bytes_out": 0,
+                "bytes_in": 0,
+                "details": [],
+                "kind": "indicator",
+            }
+            groups[key] = row
+        else:
+            row["confidences"].add(conf)
+            if _CONF_RANK[conf] > _CONF_RANK[row["confidence"]]:
+                row["confidence"] = conf
+        row["destinations"] += 1
+        row["bytes_out"] += int(getattr(dest, "bytes_out", 0) or 0)
+        row["bytes_in"] += int(getattr(dest, "bytes_in", 0) or 0)
+        detail = _tc_detail(dest)
+        if detail and detail not in row["details"] and len(row["details"]) < 2:
+            row["details"].append(detail)
+
+    for dest in destinations:
+        add(dest, "internet")
+    for dest in lan_peers or []:
+        add(dest, "lan")
+
+    out = []
+    for row in groups.values():
+        mixed = len(row.pop("confidences")) > 1
+        row["summary"] = _pattern_sentence(
+            row["label"], row["where"], row["destinations"], row["confidence"], mixed
+        )
+        out.append(row)
+    out.sort(key=lambda r: (
+        -_CONF_RANK.get(r["confidence"], 0), -r["bytes_out"], r["label"], r["where"]
+    ))
+    return out
 
 
 def _normalize(x: dict) -> dict:
@@ -121,19 +256,6 @@ def findings_for(device) -> list[dict]:
                           "Queries may leave your network even if you run Pi-hole.",
                 "category": "dns", "confidence": "certain",
             })
-        tc = d.traffic_class
-        if tc and tc.label in ("video", "audio", "audio+video") and tc.confidence in ("medium", "high"):
-            detail = d.__dict__.get("_tc_detail") or tc.label
-            f.append({
-                "severity": "info",
-                "title": f"Traffic looks like {tc.label}",
-                "detail": detail,
-                "category": "traffic-class", "confidence": tc.confidence,
-            })
-        elif tc and tc.label == "p2p-setup":
-            # STUN-only. Do not claim media.
-            pass
-
     # Hardcoded DNS also via destination list even if org enrichment named it
     for d in dests:
         if d.ip in PUBLIC_DNS and not any(x["title"].startswith("Hardcoded") for x in f):
@@ -155,15 +277,46 @@ def findings_for(device) -> list[dict]:
                 "detail": p.get("why", ""),
             })
 
-    countries = {d.country for d in dests if d.country}
-    if countries:
+    country_rows, unresolved_countries = destination_country_summary(dests)
+    if country_rows:
+        parts = [
+            f"{c['country']} ({c['bytes_out']} bytes out, {c['destinations']} destination(s))"
+            for c in country_rows
+        ]
+        detail = (
+            "Observed destination countries: " + "; ".join(parts)
+            + ". Country is a local lookup of an IP this device contacted "
+            "(an observed fact), not a guess, and not a judgement about where you live."
+        )
+        if unresolved_countries:
+            detail += f" {unresolved_countries} destination(s) had no country on file."
         f.append({
             "severity": "info",
             "title": "Cloud servers outside the local network",
-            "detail": "Observed destination countries: " + ", ".join(sorted(countries))
-                      + ". This is a location note about servers the device contacted, "
-                        "not a judgement about where you live.",
+            "detail": detail,
             "category": "location", "confidence": "certain",
+            "evidence": {"countries": [c["country"] for c in country_rows]},
+        })
+
+    for pattern in traffic_pattern_summary(dests, list(device.lan_peers.values())):
+        if pattern["label"] not in _PATTERN_FINDING_LABELS:
+            continue
+        detail = pattern["summary"]
+        if pattern["details"]:
+            detail += " " + pattern["details"][0]
+        f.append({
+            "severity": "info",
+            "title": f"Traffic pattern looks like {pattern['display']} (indicator)",
+            "detail": detail,
+            "category": "traffic-class",
+            "confidence": pattern["confidence"],
+            "evidence": {
+                "label": pattern["label"],
+                "where": pattern["where"],
+                "destinations": pattern["destinations"],
+                "bytes_out": pattern["bytes_out"],
+                "bytes_in": pattern["bytes_in"],
+            },
         })
 
     real_peers = {ip: d for ip, d in device.lan_peers.items()
@@ -300,9 +453,25 @@ def summarize(device) -> str:
     clouds = sorted({d.org for d in dests if d.org})
     if clouds:
         bits.append("Talked to: " + ", ".join(clouds[:6]) + ".")
-    countries = sorted({d.country for d in dests if d.country})
-    if countries:
-        bits.append("Server countries observed: " + ", ".join(countries) + ".")
+    country_rows, unresolved_countries = destination_country_summary(dests)
+    if country_rows:
+        bits.append(
+            "Observed destination countries: "
+            + ", ".join(f"{c['country']} ({c['bytes_out']} bytes out)" for c in country_rows)
+            + "."
+        )
+    if unresolved_countries:
+        bits.append(f"{unresolved_countries} internet destination(s) had no country on file.")
+    patterns = traffic_pattern_summary(dests, list(device.lan_peers.values()))
+    if patterns:
+        bits.append(
+            "Traffic pattern indicators (not proof): "
+            + "; ".join(
+                f"looks like {p['display']} on {p['where']} (confidence {p['confidence']})"
+                for p in patterns
+            )
+            + "."
+        )
     if any(p.get("port") == 23 for p in device.open_ports):
         bits.append("Telnet (port 23) is open on the LAN. Change defaults or block it.")
     if any(d.ip in PUBLIC_DNS for d in dests):
