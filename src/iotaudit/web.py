@@ -172,7 +172,7 @@ const OK='<label><input type="checkbox" name="consent" value="yes" required> '
  +'I own this network and this device</label> <button>Start capture</button>';
 async function poll(){{
  const r=await fetch('/api/status');if(!r.ok)return;const s=await r.json();
- let h='<p class="muted">Scan: '+e(s.scan.state)+(s.scan.error?' — '+e(s.scan.error):'')+'</p>';
+ let h='<p class="muted">Scan: '+e(s.scan.state)+(s.scan.error?': '+e(s.scan.error):'')+'</p>';
  if(s.scan.devices.length){{
   h+='<form method="post" action="/capture"><table>'
    +'<tr><th></th><th>IP</th><th>Looks like</th><th>Vendor</th></tr>';
@@ -181,7 +181,7 @@ async function poll(){{
     +'</td><td>'+e(d.looks_like)+'</td><td>'+e(d.vendor)+'</td></tr>';}}
   h+='</table>'+DUR+OK+'</form>';}}
  document.getElementById('scan').innerHTML=h;
- let c='<p class="muted">Capture: '+e(s.capture.state)+(s.capture.error?' — '+e(s.capture.error):'')+'</p>';
+ let c='<p class="muted">Capture: '+e(s.capture.state)+(s.capture.error?': '+e(s.capture.error):'')+'</p>';
  if(s.capture.report)c+='<p><a href="/report/'+encodeURIComponent(s.capture.report)+'">Open capture report</a></p>';
  document.getElementById('cap').innerHTML=c;
  if(s.scan.state=='running'||s.capture.state=='running')setTimeout(poll,3000);

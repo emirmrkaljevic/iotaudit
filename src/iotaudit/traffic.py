@@ -7,7 +7,7 @@ from collections import defaultdict
 
 BUCKET_S = 10
 
-# Bitrate (bit/s) heuristics for classification — indicators only.
+# Bitrate (bit/s) heuristics for classification. Indicators only.
 VIDEO_BPS = 150_000
 AUDIO_BPS = 16_000
 TELEMETRY_BPS = 2_000
@@ -62,12 +62,12 @@ def encryption_verdict(samples: list[bytes], assumed_tls: bool = False) -> dict:
                 "detail": f"Mostly readable bytes ({readable:.0%}), entropy {ent:.2f}."}
     if ent >= 7.2:
         return {"kind": "custom-encryption", "confidence": "medium", "readable_fraction": readable,
-                "detail": f"High entropy ({ent:.2f}) without TLS handshake — "
-                          "non-standard encryption (custom protocol), unverified."}
+                "detail": f"High entropy ({ent:.2f}) without a TLS handshake. "
+                          "Non-standard encryption (custom protocol), unverified."}
     if ent >= 6.0:
         return {"kind": "custom-encryption", "confidence": "low", "readable_fraction": readable,
-                "detail": f"Moderate-high entropy ({ent:.2f}) without TLS — "
-                          "possibly custom encryption, unverified."}
+                "detail": f"Moderate-high entropy ({ent:.2f}) without TLS. "
+                          "Possibly custom encryption, unverified."}
     return {"kind": "plaintext", "confidence": "medium", "readable_fraction": readable,
             "detail": f"Low entropy ({ent:.2f}), likely plaintext."}
 
@@ -102,7 +102,7 @@ def detect_bursts(series: dict[int, int], idle_threshold_bps: float = TELEMETRY_
 def classify_traffic(bytes_total: int, duration_s: float, ports: set[int],
                      avg_pkt: float | None = None, protocols: set[str] | None = None) -> dict:
     """Infer video/audio/telemetry with confidence. Indicators only.
-    STUN alone is NOT enough to claim video/audio media — only 'P2P session setup'.
+    STUN alone is NOT enough to claim video/audio media, only 'P2P session setup'.
     Video needs sustained bitrate evidence (default >150 kbit/s).
     """
     protocols = protocols or set()
@@ -116,22 +116,22 @@ def classify_traffic(bytes_total: int, duration_s: float, ports: set[int],
     # Require real sustained bitrate for media claims
     if bps >= VIDEO_BPS and (avg_pkt or 0) >= 600:
         return {"label": "video", "confidence": "medium",
-                "detail": f"Sustained ~{bps/1000:.0f} kbit/s with large packets — looks like video.",
+                "detail": f"Sustained ~{bps/1000:.0f} kbit/s with large packets. Looks like video.",
                 "evidence": evidence}
     if AUDIO_BPS <= bps < VIDEO_BPS and (avg_pkt or 999) < 400 and bps >= 20_000:
         return {"label": "audio", "confidence": "low",
-                "detail": f"~{bps/1000:.1f} kbit/s small packets — looks like audio.",
+                "detail": f"~{bps/1000:.1f} kbit/s with small packets. Looks like audio.",
                 "evidence": evidence}
     if stun_only and bps < VIDEO_BPS:
         return {"label": "p2p-setup", "confidence": "high",
-                "detail": "STUN/TURN present — P2P session setup (not proof that media flowed here).",
+                "detail": "STUN/TURN present. P2P session setup (not proof that media flowed here).",
                 "evidence": evidence}
     if bps < TELEMETRY_BPS or bytes_total < 5000:
         return {"label": "telemetry", "confidence": "medium",
-                "detail": f"Low volume (~{bps:.0f} bit/s) — looks like telemetry/control.",
+                "detail": f"Low volume (~{bps:.0f} bit/s). Looks like telemetry/control.",
                 "evidence": evidence}
     return {"label": "unknown", "confidence": "low",
-            "detail": f"~{bps/1000:.1f} kbit/s — not enough signal to classify.",
+            "detail": f"~{bps/1000:.1f} kbit/s. Not enough signal to classify.",
             "evidence": evidence}
 
 

@@ -3,7 +3,7 @@
 This is the one active login iotaudit makes. It only runs when the user types an explicit
 confirmation for a specific IP, it tries only a short list of well-known vendor *default*
 credentials (never a brute-force wordlist), it waits between attempts, and it stops at the first
-accepted login. It reports only "a default login was accepted" or "not accepted" — it never keeps
+accepted login. It reports only "a default login was accepted" or "not accepted". It never keeps
 or acts on a working shell.
 
 Design rules, enforced here:
@@ -82,7 +82,7 @@ class CredResult:
                 "category": "credential", "severity": "high", "confidence": "certain",
                 "title": f"Default {self.service} login accepted",
                 "detail": (f"The device accepted a well-known default {self.service} login "
-                           f"(user \"{self.username}\"{' — ' + self.note if self.note else ''}). "
+                           f"(user \"{self.username}\"{', ' + self.note if self.note else ''}). "
                            "Anyone on the network can log in. Change this password now, and "
                            "disable the service if you don't use it."),
                 "evidence": {"service": self.service, "port": self.port,

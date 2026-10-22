@@ -134,7 +134,7 @@ def build_devices(
     for f in all_flows:
         dest = ensure(f.src)
         if f.lan and is_broadcast_or_multicast(f.dst):
-            # Discovery broadcasts (e.g. Tuya 255.255.255.255:6667) — not media peers
+            # Discovery broadcasts (e.g. Tuya 255.255.255.255:6667), not media peers.
             b = next((x for x in dest.broadcasts if x.get("ip") == f.dst and x.get("port") == f.dport), None)
             if not b:
                 b = {"ip": f.dst, "port": f.dport, "proto": f.proto, "bytes_out": 0, "packets": 0}

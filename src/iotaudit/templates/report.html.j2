@@ -60,12 +60,12 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
   {% endif %}
   <h3>Findings</h3>
   {% if d.findings %}<ul>{% for f in d.findings %}
-    <li><span class="{{ f.severity }}">[{{ f.severity }}]</span> <b>{{ f.title }}</b> &mdash; {{ f.detail }}{% if f.confidence and f.confidence != "certain" %} <span class="tag">confidence: {{ f.confidence }}</span>{% endif %}</li>
+    <li><span class="{{ f.severity }}">[{{ f.severity }}]</span> <b>{{ f.title }}</b>: {{ f.detail }}{% if f.confidence and f.confidence != "certain" %} <span class="tag">confidence: {{ f.confidence }}</span>{% endif %}</li>
   {% endfor %}</ul>{% else %}<p>No issues observed.</p>{% endif %}
   <h3>Internet destinations</h3>
   <table><tr><th>Domain(s)</th><th>IP</th><th>Country</th><th>Organisation</th><th>Ports / proto</th><th>Bytes</th><th>Encryption</th><th>Class</th></tr>
   {% for x in d.destinations %}<tr>
-    <td>{{ x.domains|join(", ") or "—" }}{% if x.tracker %} <span class="tag">tracker</span>{% endif %}</td>
+    <td>{{ x.domains|join(", ") or "none" }}{% if x.tracker %} <span class="tag">tracker</span>{% endif %}</td>
     <td>{{ x.ip }}</td><td>{{ x.country or "?" }}</td><td>{{ x.org or "?" }}</td>
     <td>{{ x.ports|join(", ") }}{% if x.protocols %} ({{ x.protocols|join(", ") }}){% endif %}</td>
     <td>{{ x.bytes_out }} out / {{ x.bytes_in or 0 }} in</td>
@@ -77,16 +77,16 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
           <span class="muted">({{ (x.readable_fraction*100)|int }}% readable)</span>
         {% endif %}
     </td>
-    <td>{% if x.traffic_class %}{{ x.traffic_class.label }} <span class="tag">{{ x.traffic_class.confidence }}</span>{% else %}—{% endif %}</td>
+    <td>{% if x.traffic_class %}{{ x.traffic_class.label }} <span class="tag">{{ x.traffic_class.confidence }}</span>{% else %}none{% endif %}</td>
   </tr>{% endfor %}
   </table>
   {% if d.lan_peers %}
-  <h3>LAN peers (same Wi-Fi — often phone P2P video)</h3>
+  <h3>LAN peers (same Wi-Fi, often phone P2P video)</h3>
   <table><tr><th>IP</th><th>Ports</th><th>Bytes</th><th>Class</th></tr>
   {% for x in d.lan_peers %}<tr>
     <td>{{ x.ip }}{% if x.special_use %} <span class="tag">special-use / not a real device</span>{% endif %}</td>
     <td>{{ x.ports|join(", ") }}</td><td>{{ x.bytes_out }} out / {{ x.bytes_in or 0 }} in</td>
-    <td>{% if x.special_use %}<span class="muted">bogon/placeholder</span>{% elif x.traffic_class %}{{ x.traffic_class.label }}{% else %}—{% endif %}</td>
+    <td>{% if x.special_use %}<span class="muted">bogon/placeholder</span>{% elif x.traffic_class %}{{ x.traffic_class.label }}{% else %}none{% endif %}</td>
   </tr>{% endfor %}
   </table>
   {% endif %}
