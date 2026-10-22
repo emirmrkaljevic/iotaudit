@@ -128,7 +128,7 @@ class Collector:
             return
         ip = pkt[IP]
         if Ether in pkt and is_private(ip.src):
-            # Only learn MAC from the packet source — never from Ethernet dst
+            # Only learn MAC from the packet source, never from Ethernet dst
             # (dst is often the gateway/our NIC and would mis-label the device).
             self.macs.setdefault(ip.src, pkt[Ether].src.lower())
         if DNS in pkt:

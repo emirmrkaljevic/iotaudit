@@ -22,7 +22,7 @@ def review_report(dev: dict) -> dict:
     Keys: stun (bool), observed_media (bool), real_lan_bytes (int),
     special_use_peers (list[str]), ipv6_bytes (int), media_not_observed (bool).
     media_not_observed is True when a P2P session was set up (STUN) but no sustained media
-    stream was captured on the LAN, over IPv6, or to the cloud — i.e. the honest
+    stream was captured on the LAN, over IPv6, or to the cloud, i.e. the honest
     "video may have gone directly to your phone; not observed" case.
     """
     dests = dev.get("destinations") or []

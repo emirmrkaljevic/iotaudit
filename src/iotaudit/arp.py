@@ -239,7 +239,7 @@ class NDPSpoofer:
 
     def __init__(self, iface: str, our_mac_addr: str,
                  pairs: list[tuple[str, str]] | None = None, interval: float = 2.0):
-        """pairs: [(ipv6_or_mac_a, ipv6_or_mac_b), ...] — each side given as a link-local
+        """pairs: [(ipv6_or_mac_a, ipv6_or_mac_b), ...]. Each side is given as a link-local
         address or a MAC (we derive the link-local via EUI-64)."""
         self.iface = iface
         self.our_mac = our_mac_addr

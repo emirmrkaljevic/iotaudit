@@ -201,7 +201,7 @@ def arp_sweep(cidr: str | None = None, iface: str | None = None, timeout: int = 
                 if mac:
                     found[rcv.psrc] = mac
             scapy_ok = True
-        except Exception:  # noqa: BLE001 — any scapy/pcap failure falls back
+        except Exception:  # noqa: BLE001  any scapy/pcap failure falls back
             scapy_ok = False
         if not scapy_ok or not found:
             _ping_sweep(cidr)
