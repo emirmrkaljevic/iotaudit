@@ -419,7 +419,7 @@ def identify_network(devices: list[dict], budget_s: float = 15.0) -> list[dict]:
             d["likely_iot"] = True
         out.append(d)
         if time.time() - t0 > budget_s:
-            # Still identify remaining via OUI/role only (skip further port probes by
+            # Still identify remaining via OUI/role only. Skip further port probes by
             # short-circuiting (probe_ports still runs; budget is soft).
             pass
     return out

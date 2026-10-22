@@ -50,9 +50,21 @@ def test_pipeline(tmp_path):
     assert dests["3.120.1.1"]["encrypted"] and dests["3.120.1.1"]["expected"]
     assert not dests["47.1.2.3"]["encrypted"] and dests["47.1.2.3"]["tracker"]
     assert d["grade"] in "CDEF"
-    assert all(f["confidence"] == "certain" and f["category"] for f in d["findings"])
+    # Observed findings stay certain. Pattern matches carry their own confidence.
+    for f in d["findings"]:
+        assert f["category"]
+        if f["title"].startswith("Traffic pattern"):
+            assert f["confidence"] in ("low", "medium", "high")
+            assert "indicator" in f["title"]
+            assert "Indicator only" in f["detail"]
+        else:
+            assert f["confidence"] == "certain"
+    assert {c["country"] for c in d["destination_countries"]} == {"DE", "US"}
+    assert any(p["label"] == "telemetry" and p["kind"] == "indicator" for p in d["traffic_patterns"])
     html = render_html(devs)
     assert "tuyaeu.com" in html and DEV in html
+    assert "Destination countries" in html and "Traffic patterns" in html
+    assert "\u2014" not in html and "&mdash;" not in html
 
 
 def test_grade_and_nmap():

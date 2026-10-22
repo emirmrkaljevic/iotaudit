@@ -14,10 +14,16 @@ from .enrich import (
     org_for,
     special_use_label,
 )
-from .grading import findings_for, grade, summarize
+from .grading import (
+    destination_country_summary,
+    findings_for,
+    grade,
+    summarize,
+    traffic_pattern_summary,
+)
 from .models import Destination, Device, TrafficClass
 from .profiles import is_expected, load_profiles, match_profile
-from .traffic import classify_traffic, detect_bursts, encryption_verdict, merge_series
+from .traffic import PATTERN_DISPLAY, classify_traffic, detect_bursts, encryption_verdict, merge_series
 
 
 def _apply_flow(d: Destination, f) -> None:
@@ -218,6 +224,7 @@ def _dest_dict(d: Destination) -> dict:
     if d.traffic_class:
         tc = {
             "label": d.traffic_class.label,
+            "display": PATTERN_DISPLAY.get(d.traffic_class.label, d.traffic_class.label),
             "confidence": d.traffic_class.confidence,
             "detail": d.__dict__.get("_tc_detail"),
             "evidence": d.traffic_class.evidence,
@@ -279,4 +286,10 @@ def to_dict(dev: Device) -> dict:
         from .devicetype import type_from_report
 
         d["device_type"] = type_from_report(d)
+    countries, unresolved = destination_country_summary(list(dev.destinations.values()))
+    d["destination_countries"] = countries
+    d["destinations_without_country"] = unresolved
+    d["traffic_patterns"] = traffic_pattern_summary(
+        list(dev.destinations.values()), list(dev.lan_peers.values())
+    )
     return d

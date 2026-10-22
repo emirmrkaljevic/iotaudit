@@ -17,6 +17,10 @@ runs locally: no account, no telemetry, no cloud.
 It answers the questions you actually have about a cheap smart device:
 
 - **Who does it talk to?** Domains (DNS + TLS SNI + HTTP Host), IPs, country, organisation.
+  The report lists the destination countries for each device (observed fact).
+- **What does the traffic look like?** A separate per-device indicator for video, audio,
+  telemetry, or unknown, each with a low, medium, or high confidence. It is a pattern
+  match, not proof of what was sent.
 - **Is it encrypted?** Plaintext HTTP, unencrypted TCP, old TLS, or "custom" high-entropy protocols.
 - **What ports are open?** Optional `nmap` scan with risk notes (telnet, RTSP, UPnP, ADB, …).
 - **Is it reachable from the internet?** Lists the port forwards your router opened via UPnP
@@ -25,7 +29,7 @@ It answers the questions you actually have about a cheap smart device:
 - **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN, and an honest note
   when a stream was set up but never actually passed through your computer.
 
-> Status: **0.1.4**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.5**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading, HTML report,
 > a local web UI and the MCP server work. Offline CVE hints are on the [roadmap](ROADMAP.md).
 
