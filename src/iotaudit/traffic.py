@@ -7,6 +7,17 @@ from collections import defaultdict
 
 BUCKET_S = 10
 
+# Machine label -> plain English. These phrases are indicators, not claims.
+PATTERN_DISPLAY = {
+    "video": "video",
+    "audio": "audio",
+    "audio+video": "audio and video",
+    "telemetry": "telemetry",
+    "firmware-download": "a firmware download",
+    "p2p-setup": "peer-to-peer session setup",
+    "unknown": "unknown traffic",
+}
+
 # Bitrate (bit/s) heuristics for classification. Indicators only.
 VIDEO_BPS = 150_000
 AUDIO_BPS = 16_000
@@ -112,26 +123,31 @@ def classify_traffic(bytes_total: int, duration_s: float, ports: set[int],
     stun_only = (3478 in ports or "STUN/TURN" in protocols or "STUN" in protocols)
     if 554 in ports or 8554 in ports or "RTSP" in protocols:
         return {"label": "video", "confidence": "high",
-                "detail": "RTSP port observed.", "evidence": evidence}
+                "detail": "RTSP port observed. Indicator: looks like video, not proof of a stream.",
+                "evidence": evidence}
     # Require real sustained bitrate for media claims
     if bps >= VIDEO_BPS and (avg_pkt or 0) >= 600:
         return {"label": "video", "confidence": "medium",
-                "detail": f"Sustained ~{bps/1000:.0f} kbit/s with large packets. Looks like video.",
+                "detail": f"Sustained ~{bps/1000:.0f} kbit/s with large packets. "
+                          "Indicator: looks like video, not proof.",
                 "evidence": evidence}
     if AUDIO_BPS <= bps < VIDEO_BPS and (avg_pkt or 999) < 400 and bps >= 20_000:
         return {"label": "audio", "confidence": "low",
-                "detail": f"~{bps/1000:.1f} kbit/s with small packets. Looks like audio.",
+                "detail": f"~{bps/1000:.1f} kbit/s with small packets. "
+                          "Indicator: looks like audio, not proof.",
                 "evidence": evidence}
     if stun_only and bps < VIDEO_BPS:
         return {"label": "p2p-setup", "confidence": "high",
-                "detail": "STUN/TURN present. P2P session setup (not proof that media flowed here).",
+                "detail": "STUN/TURN present. Indicator: peer-to-peer session setup, "
+                          "not proof that media flowed here.",
                 "evidence": evidence}
     if bps < TELEMETRY_BPS or bytes_total < 5000:
         return {"label": "telemetry", "confidence": "medium",
-                "detail": f"Low volume (~{bps:.0f} bit/s). Looks like telemetry/control.",
+                "detail": f"Low volume (~{bps:.0f} bit/s). "
+                          "Indicator: looks like telemetry or control, not proof.",
                 "evidence": evidence}
     return {"label": "unknown", "confidence": "low",
-            "detail": f"~{bps/1000:.1f} kbit/s. Not enough signal to classify.",
+            "detail": f"~{bps/1000:.1f} kbit/s. Indicator: unknown. Not enough signal to classify.",
             "evidence": evidence}
 
 
