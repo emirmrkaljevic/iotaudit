@@ -5,7 +5,7 @@ from __future__ import annotations
 from .enrich import PUBLIC_DNS, is_cgnat, is_special_use
 
 PENALTY = {"high": 25, "medium": 10, "low": 4, "info": 0}
-# Telnet is especially bad — already high (25); keep explicit weight note in finding.
+# Telnet is especially bad (already high, 25); keep an explicit weight note in the finding.
 GRADES = [(90, "A"), (75, "B"), (60, "C"), (45, "D"), (30, "E"), (0, "F")]
 
 CATEGORY_BY_TITLE = {
@@ -56,7 +56,7 @@ def findings_for(device) -> list[dict]:
         })
     if not dests and not device.open_ports and not device.lan_peers:
         f.append({
-            "severity": "info", "title": "Limited data — almost no traffic",
+            "severity": "info", "title": "Limited data, almost no traffic",
             "detail": "Very little was observed. Do not treat the grade as conclusive.",
             "category": "coverage", "confidence": "certain",
         })
@@ -64,7 +64,7 @@ def findings_for(device) -> list[dict]:
     for d in dests:
         label = ", ".join(sorted(d.domains)) or d.ip
         if d.encryption_kind == "plaintext":
-            # DNS to public resolvers is expected plaintext — covered by the DNS finding
+            # DNS to public resolvers is expected plaintext (covered by the DNS finding).
             if d.ports <= {53} or d.ip in PUBLIC_DNS and d.ports <= {53}:
                 pass
             else:
@@ -101,15 +101,15 @@ def findings_for(device) -> list[dict]:
             f.append({
                 "severity": "info",
                 "title": "STUN/TURN (P2P video setup)",
-                "detail": f"STUN/TURN to {label} ({d.org or d.ip}) — typical for peer-to-peer "
-                          "video/audio; the media may stay on the LAN or go via a relay.",
+                "detail": f"STUN/TURN to {label} ({d.org or d.ip}), typical for peer-to-peer "
+                          "video/audio. The media may stay on the LAN or go via a relay.",
                 "category": "traffic-class", "confidence": "high",
             })
         if is_cgnat(d.ip) or "CGNAT-peer" in d.protocols:
             f.append({
                 "severity": "info",
                 "title": "Carrier NAT / P2P peer (100.64/10)",
-                "detail": f"Traffic to {d.ip} is in CGNAT space — often a phone or peer behind "
+                "detail": f"Traffic to {d.ip} is in CGNAT space, often a phone or peer behind "
                           "carrier-grade NAT during P2P video.",
                 "category": "traffic-class", "confidence": "medium",
             })
@@ -131,7 +131,7 @@ def findings_for(device) -> list[dict]:
                 "category": "traffic-class", "confidence": tc.confidence,
             })
         elif tc and tc.label == "p2p-setup":
-            # STUN-only — do not claim media
+            # STUN-only. Do not claim media.
             pass
 
     # Hardcoded DNS also via destination list even if org enrichment named it
@@ -194,7 +194,7 @@ def findings_for(device) -> list[dict]:
             "detail": "Saw traffic to/from " + ", ".join(bits) + ", which is reserved / "
                       "protocol-assignment space (e.g. 192.0.0.0/24), not a real device on your "
                       "Wi-Fi. It is almost always a placeholder/DS-Lite address or an address "
-                      "carried inside P2P/STUN signalling — not a second hidden gadget.",
+                      "carried inside P2P/STUN signalling, not a second hidden gadget.",
             "category": "traffic-class", "confidence": "high",
         })
     if getattr(device, "broadcasts", None):
@@ -202,7 +202,7 @@ def findings_for(device) -> list[dict]:
         f.append({
             "severity": "info",
             "title": "LAN discovery broadcasts",
-            "detail": f"{total} bytes of broadcast/multicast (e.g. Tuya UDP 6667) — not media.",
+            "detail": f"{total} bytes of broadcast/multicast (e.g. Tuya UDP 6667), not media.",
             "category": "traffic-class", "confidence": "certain",
         })
 
@@ -235,7 +235,7 @@ def findings_for(device) -> list[dict]:
                       "this computer: two Wi-Fi clients can talk without their traffic crossing "
                       "your Mac, and spoofed ARP/NDP may not redirect it (client isolation, or the "
                       "phone ignoring the spoof)." + extra + " Not observed does not mean it did "
-                      "not happen — re-run with the app streaming, or capture at the router.",
+                      "not happen. Re-run with the app streaming, or capture at the router.",
             "category": "traffic-class", "confidence": "high",
         })
     # IPv6 coverage note (always, so the report is explicit about what it could see).
@@ -304,7 +304,7 @@ def summarize(device) -> str:
     if countries:
         bits.append("Server countries observed: " + ", ".join(countries) + ".")
     if any(p.get("port") == 23 for p in device.open_ports):
-        bits.append("Telnet (port 23) is open on the LAN — change defaults / block it.")
+        bits.append("Telnet (port 23) is open on the LAN. Change defaults or block it.")
     if any(d.ip in PUBLIC_DNS for d in dests):
         bits.append("Uses public DNS directly (bypasses your router).")
     if any(3478 in d.ports for d in dests):
@@ -316,8 +316,8 @@ def summarize(device) -> str:
         bits.append(f"LAN peer traffic {lan} bytes vs internet {wan} bytes "
                     "(video may have stayed on Wi-Fi).")
     elif any(3478 in d.ports for d in dests):
-        bits.append("A P2P video session was set up but no media stream was captured here — "
-                    "it likely went straight to your phone over Wi-Fi (not observed).")
+        bits.append("A P2P video session was set up but no media stream was captured here. "
+                    "It likely went straight to your phone over Wi-Fi (not observed).")
     if device.idle_upload:
         bits.append(f"Uploads while app idle: {device.idle_upload}.")
     if device.bursts:

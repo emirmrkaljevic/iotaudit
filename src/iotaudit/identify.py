@@ -1,8 +1,8 @@
 """Fast LAN device identification (~10-20s): mDNS, SSDP/UPnP, NetBIOS, Tuya LAN UDP,
-telltale TCP ports, HTTP banners — combined with OUI into a 'Looks like' label + confidence.
+telltale TCP ports, and HTTP banners, combined with OUI into a 'Looks like' label and confidence.
 All local, no cloud calls.
 
-OUI alone never asserts a brand or model — only vendor + generic hint at low confidence.
+OUI alone never asserts a brand or model. It only adds the vendor and a generic hint at low confidence.
 Brand/type labels require real evidence (mDNS/SSDP/Tuya broadcast/ports/HTTP), and the
 list shows that evidence source.
 """
@@ -258,7 +258,7 @@ def identify_device(ip: str, mac: str | None = None, hostname: str | None = None
                     mdns: dict | None = None, tuya: dict | None = None) -> dict:
     """Return {looks_like, confidence, evidence}. Brand/type needs real evidence."""
     evidence: list[str] = []
-    # (label, confidence, source) — source "oui" is never preferred over active evidence
+    # (label, confidence, source). Source "oui" is never preferred over active evidence.
     candidates: list[tuple[str, str, str]] = []
 
     if role == "router":
@@ -303,7 +303,7 @@ def identify_device(ip: str, mac: str | None = None, hostname: str | None = None
             evidence.append(f"SSDP: {name}")
             label = f"{name} (SSDP)"
             if mfr:
-                label = f"{name} — {mfr} (SSDP)"
+                label = f"{name} ({mfr}, SSDP)"
             candidates.append((label, "high", "ssdp"))
         elif mfr:
             candidates.append((f"{mfr} device (SSDP)", "medium", "ssdp"))
@@ -420,6 +420,6 @@ def identify_network(devices: list[dict], budget_s: float = 15.0) -> list[dict]:
         out.append(d)
         if time.time() - t0 > budget_s:
             # Still identify remaining via OUI/role only (skip further port probes by
-            # short-circuiting — probe_ports still runs; budget is soft).
+            # short-circuiting (probe_ports still runs; budget is soft).
             pass
     return out

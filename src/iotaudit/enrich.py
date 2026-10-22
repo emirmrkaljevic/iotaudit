@@ -166,7 +166,7 @@ class Geo:
             try:
                 import maxminddb
                 self.reader = maxminddb.open_database(path)
-            except Exception:  # noqa: BLE001 — missing maxminddb or bad file
+            except Exception:  # noqa: BLE001  missing maxminddb or bad file
                 try:
                     # DB-IP / MaxMind readers via maxminddb only; soft-fail
                     self.reader = None
@@ -314,7 +314,7 @@ def is_special_use(ip: str) -> bool:
 def special_use_label(ip: str) -> str:
     net = _in_any(ip, SPECIAL_USE_NETS)
     base = SPECIAL_USE_NETS.get(net, "special-use address")
-    return (f"special-use {base} — not a real device on your Wi-Fi; "
+    return (f"special-use {base}, not a real device on your Wi-Fi; "
             "likely a placeholder/DS-Lite address or one carried inside P2P/STUN signalling")
 
 
