@@ -3,6 +3,12 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.7] - 2026-10-23
+
+### Changed
+- Use synthetic MAC, CGNAT, and LAN addresses across all sample reports and test
+  fixtures.
+
 ## [0.1.6] - 2026-10-23
 
 ### Added

@@ -32,7 +32,7 @@ It answers the questions you actually have about a cheap smart device:
 - **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN, and an honest note
   when a stream was set up but never actually passed through your computer.
 
-> Status: **0.1.6**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.7**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading with a
 > one-line safety verdict, HTML report, a local web UI and the MCP server work. Offline CVE
 > hints are on the [roadmap](ROADMAP.md).
