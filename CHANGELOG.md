@@ -3,6 +3,17 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.6] - 2026-10-23
+
+### Added
+- **Per-device safety verdict.** Each device now has a `verdict` string in the JSON
+  report and a one-line verdict beside the grade in the HTML report. The longer
+  `summary` paragraph is unchanged. Observed facts (risky open ports, hardcoded
+  public DNS, TLS versus plaintext, destination countries from the local GeoIP
+  lookup) are stated plainly. Traffic patterns stay indicators: a match carries
+  a confidence and is not a claim about what was sent, and the line does not
+  accuse a vendor.
+
 ## [0.1.5] - 2026-10-22
 
 ### Added

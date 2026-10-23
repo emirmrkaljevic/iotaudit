@@ -11,11 +11,14 @@
 <p align="center"><a href="https://skintoscan.com/checkout/?add-to-cart=138"><img src=".github/assets/skintoscan-pack-1.svg" width="220" alt="Buy Single Picture Check, €4.49"></a> <a href="https://skintoscan.com/checkout/?add-to-cart=139"><img src=".github/assets/skintoscan-pack-5.svg" width="220" alt="Buy 5 Picture Pack, €19.99 (popular)"></a> <a href="https://skintoscan.com/checkout/?add-to-cart=140"><img src=".github/assets/skintoscan-pack-15.svg" width="220" alt="Buy 15 Picture Pack, €54.99"></a></p>
 
 **Is your smart pet feeder, camera or plug safe?** `iotaudit` watches what your own IoT devices
-do on the network and gives each one an **A–F grade** with a one-page HTML report. Everything
+do on the network and gives each one an **A-F grade**, a one-line safety verdict, and a one-page HTML report. Everything
 runs locally: no account, no telemetry, no cloud.
 
 It answers the questions you actually have about a cheap smart device:
 
+- **What is the short version?** A one-line verdict next to the grade. Open ports, public DNS,
+  TLS or plaintext, and destination countries are observed facts. Video, audio, and other
+  traffic patterns stay indicators with a confidence.
 - **Who does it talk to?** Domains (DNS + TLS SNI + HTTP Host), IPs, country, organisation.
   The report lists the destination countries for each device (observed fact).
 - **What does the traffic look like?** A separate per-device indicator for video, audio,
@@ -29,15 +32,17 @@ It answers the questions you actually have about a cheap smart device:
 - **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN, and an honest note
   when a stream was set up but never actually passed through your computer.
 
-> Status: **0.1.5**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
-> identification, UPnP port-forward audit, an opt-in default-password check, grading, HTML report,
-> a local web UI and the MCP server work. Offline CVE hints are on the [roadmap](ROADMAP.md).
+> Status: **0.1.6**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> identification, UPnP port-forward audit, an opt-in default-password check, grading with a
+> one-line safety verdict, HTML report, a local web UI and the MCP server work. Offline CVE
+> hints are on the [roadmap](ROADMAP.md).
 
 ## Sample report
 
-A report for a Tuya-associated pet feeder (anonymized). It talks to US clouds over TLS/MQTT, keeps
-**telnet open**, uses **hardcoded 8.8.8.8**, sets up a **P2P video session that was not observed**
-on this run, and shows an odd **special-use "LAN peer"** that is not a real device:
+A report for a Tuya-associated pet feeder (anonymized). The one-line verdict sits beside the
+grade: telnet open on the LAN, public DNS, TLS cloud traffic to the US, unverified custom
+encryption, and a P2P video setup whose stream was not observed on this run. The longer summary
+is still underneath. It also shows an odd **special-use "LAN peer"** that is not a real device:
 
 ![Sample iotaudit report](docs/sample-report.png)
 

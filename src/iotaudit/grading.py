@@ -1,4 +1,9 @@
-"""A-F grading and plain-English summary. Findings are indicators, not proof."""
+"""A-F grading, a one-line safety verdict, and a plain-English summary.
+
+The verdict states observed facts plainly (open ports, public DNS, TLS versus
+plaintext, destination countries). Traffic patterns stay indicators: a match
+is never worded as proof, and nothing here accuses a vendor.
+"""
 
 from __future__ import annotations
 
@@ -498,3 +503,225 @@ def summarize(device) -> str:
             f"{len(customs)} destination(s) look like custom/non-TLS encryption (unverified)."
         )
     return " ".join(bits)
+
+
+# Short names for risky LAN services. The port number is what was observed.
+_PORT_LABELS = {
+    21: "FTP",
+    22: "SSH",
+    23: "Telnet",
+    80: "HTTP",
+    554: "RTSP",
+    1900: "UPnP",
+    5000: "UPnP",
+    5555: "ADB",
+    6668: "Tuya local",
+    8080: "HTTP",
+    8899: "ONVIF",
+}
+
+_MEDIA_LABELS = ("video", "audio", "audio+video")
+# Same bar as the "stream not observed" finding: below this we do not call it media.
+_MEDIA_BYTES = 500_000
+
+
+def _port_label(port: dict) -> str:
+    num = port.get("port")
+    if num in _PORT_LABELS:
+        return _PORT_LABELS[num]
+    service = (port.get("service") or "").strip()
+    if service and service.lower() not in {"unknown", "tcpwrapped", "?"}:
+        return service[:1].upper() + service[1:]
+    return f"Port {num}"
+
+
+def _ports_clause(labels: list[str]) -> str:
+    if len(labels) == 1:
+        return f"{labels[0]} open on the LAN"
+    if len(labels) == 2:
+        return f"{labels[0]} and {labels[1]} open on the LAN"
+    return ", ".join(labels[:-1]) + f", and {labels[-1]} open on the LAN"
+
+
+def _dns_only(dest) -> bool:
+    """DNS itself is not cloud-app traffic. Public resolvers get their own fact."""
+    ports = set(getattr(dest, "ports", None) or ())
+    if not ports:
+        return getattr(dest, "ip", None) in PUBLIC_DNS
+    return ports <= {53}
+
+
+def _country_label(rows: list[dict]) -> str | None:
+    if not rows:
+        return None
+    names = [row["country"] for row in rows[:3]]
+    label = ", ".join(names)
+    extra = len(rows) - len(names)
+    if extra:
+        label = f"{label}, +{extra}"
+    return label
+
+
+def _with_place(phrase: str, place: str | None) -> str:
+    if place:
+        return f"{phrase} ({place})"
+    return phrase
+
+
+def _encryption_clauses(cloud: list, place: str | None) -> list[str]:
+    """TLS versus plaintext is an observed fact. Custom encryption is unverified."""
+    kinds = {getattr(d, "encryption_kind", None) for d in cloud}
+    has_plain = "plaintext" in kinds
+    has_tls = "tls" in kinds
+    has_custom = "custom-encryption" in kinds
+    clauses: list[str] = []
+    if has_plain and has_tls:
+        clauses.append(_with_place("plaintext and TLS cloud traffic", place))
+    elif has_plain:
+        clauses.append(_with_place("plaintext traffic to the internet", place))
+    elif has_tls and not has_custom:
+        clauses.append(_with_place("encrypted cloud traffic", place))
+    elif has_tls:
+        clauses.append(_with_place("TLS cloud traffic", place))
+    elif has_custom:
+        if place:
+            clauses.append(f"custom encryption to the cloud ({place}, unverified)")
+        else:
+            clauses.append("custom encryption to the cloud (unverified)")
+        return clauses
+    elif cloud:
+        if place:
+            clauses.append(f"cloud traffic ({place}), encryption not confirmed")
+        else:
+            clauses.append("cloud traffic, encryption not confirmed")
+        return clauses
+    if has_custom:
+        clauses.append("custom encryption (unverified)")
+    return clauses
+
+
+def _real_lan_bytes(device) -> int:
+    total = 0
+    for ip, dest in device.lan_peers.items():
+        if dest.__dict__.get("special_use") or is_special_use(ip):
+            continue
+        total += int(dest.bytes_out or 0) + int(dest.bytes_in or 0)
+    return total
+
+
+def _ipv6_bytes(device) -> int:
+    ipv6 = device.__dict__.get("ipv6") or {}
+    if not isinstance(ipv6, dict):
+        return 0
+    return int(ipv6.get("bytes") or 0)
+
+
+def _strongest_media_confidence(device, dests) -> str | None:
+    """Medium or high media patterns only. Low is not enough to say a stream was seen."""
+    best = None
+    for dest in list(dests) + list(device.lan_peers.values()):
+        if dest.__dict__.get("special_use") or is_special_use(getattr(dest, "ip", "") or ""):
+            continue
+        tc = getattr(dest, "traffic_class", None)
+        label = getattr(tc, "label", None)
+        if label not in _MEDIA_LABELS:
+            continue
+        conf = getattr(tc, "confidence", None) or "low"
+        if conf == "certain":
+            conf = "high"
+        elif conf not in _CONF_RANK:
+            conf = "low"
+        if conf not in ("medium", "high"):
+            continue
+        if best is None or _CONF_RANK[conf] > _CONF_RANK[best]:
+            best = conf
+    return best
+
+
+def _pattern_indicator(device, dests) -> str | None:
+    """One hedged pattern clause. Confidence is never 'certain'."""
+    patterns = traffic_pattern_summary(dests, list(device.lan_peers.values()))
+    if not patterns:
+        return None
+    pattern = patterns[0]
+    return f"looks like {pattern['display']} (confidence {pattern['confidence']})"
+
+
+def _indicator_clause(device, dests) -> str | None:
+    """Traffic-pattern indicator. Never a claim that media contents were proven."""
+    stun = any(
+        3478 in (getattr(d, "ports", None) or ())
+        or "STUN/TURN" in (getattr(d, "protocols", None) or ())
+        for d in dests
+    )
+    media_conf = _strongest_media_confidence(device, dests)
+    lan_bytes = _real_lan_bytes(device)
+    ipv6_bytes = _ipv6_bytes(device)
+    if stun and media_conf:
+        return f"P2P video setup (looks like a stream, confidence {media_conf})"
+    if stun and (lan_bytes >= _MEDIA_BYTES or ipv6_bytes >= _MEDIA_BYTES):
+        return "P2P video setup (traffic seen, stream not confirmed)"
+    if stun:
+        # STUN/TURN was observed. A media stream was not. "Video" is the usual
+        # role of that handshake, not a claim we saw one.
+        return "P2P video setup (stream not observed here)"
+    return _pattern_indicator(device, dests)
+
+
+def _letter(device) -> str:
+    letter = getattr(device, "grade", None)
+    if letter in set("ABCDEF"):
+        return letter
+    _, letter = grade(list(getattr(device, "findings", None) or []))
+    return letter
+
+
+def safety_verdict(device) -> str:
+    """One skimmable line: grade, observed facts, then at most one hedged indicator.
+
+    Example: "D: Telnet open on the LAN; uses public DNS directly; encrypted
+    cloud traffic (US); P2P video setup (stream not observed here)."
+    """
+    dests = list(device.destinations.values())
+    facts: list[str] = []
+
+    risky: list[str] = []
+    for port in device.open_ports or []:
+        if not port.get("risk"):
+            continue
+        label = _port_label(port)
+        if label not in risky:
+            risky.append(label)
+    if risky:
+        facts.append(_ports_clause(risky))
+    elif device.open_ports:
+        facts.append("no risky ports")
+
+    if any(d.ip in PUBLIC_DNS for d in dests):
+        facts.append("uses public DNS directly")
+
+    cloud = [d for d in dests if not _dns_only(d)]
+    country_rows, _unresolved = destination_country_summary(dests)
+    place = _country_label(country_rows)
+    if cloud:
+        facts.extend(_encryption_clauses(cloud, place))
+    elif place:
+        facts.append(f"servers in {place}")
+
+    trackers = sum(1 for d in dests if getattr(d, "tracker", False))
+    if trackers == 1:
+        facts.append("one analytics tracker")
+    elif trackers > 1:
+        facts.append(f"{trackers} analytics trackers")
+
+    parts = list(facts)
+    indicator = _indicator_clause(device, dests)
+    if indicator:
+        parts.append(indicator)
+    if not parts:
+        parts.append("little traffic observed, so this grade is not conclusive")
+
+    body = "; ".join(parts)
+    if not body.endswith("."):
+        body += "."
+    return f"{_letter(device)}: {body}"

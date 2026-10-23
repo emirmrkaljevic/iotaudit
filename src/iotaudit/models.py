@@ -94,6 +94,7 @@ class Device:
     findings: list[dict] = field(default_factory=list)
     grade: str | None = None
     score: int | None = None
+    verdict: str | None = None
     summary: str | None = None
     series_total: dict = field(default_factory=dict)
     bursts: list = field(default_factory=list)
