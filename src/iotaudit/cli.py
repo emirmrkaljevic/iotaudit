@@ -43,7 +43,8 @@ def _finish(col, args, meta) -> int:
     out = Path(args.out)
     out.write_text(render_html(devices, meta), encoding="utf-8")
     for d in devices:
-        print(f"{d['ip']:<16} grade {d['grade']}  ({len(d['destinations'])} destinations, "
+        head = d.get("verdict") or f"grade {d['grade']}"
+        print(f"{d['ip']:<16} {head}  ({len(d['destinations'])} destinations, "
               f"{len(d['findings'])} findings)")
     print(f"Report written to {out.resolve()}")
     print(f"JSON written to {Path(json_path).resolve()}")

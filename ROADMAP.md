@@ -92,9 +92,11 @@ Plain-English per-device findings such as:
 
 ## Verdict
 
-Each device gets a one-line safety verdict on top of the A–F grade, e.g.
-*"B – Encrypted cloud traffic to the vendor in the EU; one analytics tracker; no risky ports."*
-The verdict separates observed facts from inferred indicators.
+Done in 0.1.6. Each device gets a one-line safety verdict on top of the A-F grade, for example
+*"D: Telnet open on the LAN; uses public DNS directly; encrypted cloud traffic (US); P2P video setup (stream not observed here)."*
+The verdict separates observed facts (open ports, hardcoded public DNS, TLS versus plaintext,
+destination countries) from inferred indicators (traffic patterns, worded with a confidence
+and never as proof).
 
 ## Device coverage
 

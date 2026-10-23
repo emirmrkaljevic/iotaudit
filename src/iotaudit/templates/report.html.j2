@@ -7,6 +7,8 @@ body{font-family:system-ui,sans-serif;max-width:960px;margin:2rem auto;padding:0
 h1{margin-bottom:.2rem}.muted{color:#666;font-size:.9rem}
 .card{border:1px solid #ddd;border-radius:10px;padding:1rem 1.2rem;margin:1.2rem 0}
 .summary{background:#f6f8fa;border-radius:8px;padding:.8rem 1rem;margin:.8rem 0}
+.verdict{margin:.15rem 4.8rem .45rem 0;padding:.55rem .8rem;background:#f3f6f4;border-radius:8px;
+line-height:1.45;font-size:1.02rem}
 .grade{float:right;font-size:2.6rem;font-weight:700;width:3.6rem;height:3.6rem;line-height:3.6rem;
 text-align:center;border-radius:10px;color:#fff}
 .gA{background:#1a7f37}.gB{background:#4c9a2a}.gC{background:#c69026}.gD{background:#d4691c}
@@ -30,6 +32,7 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
 <div class="card">
   <div class="grade g{{ d.grade }}">{{ d.grade }}</div>
   <h2>{{ d.ip }}</h2>
+  {% if d.verdict %}<p class="verdict"><b>Verdict.</b> {{ d.verdict }}</p>{% endif %}
   <p class="muted">MAC {{ d.mac or "?" }} &middot; {{ d.vendor or "unknown vendor" }}
   {% if d.profile %}&middot; profile: {{ d.profile }}{% endif %} &middot; score {{ d.score }}/100</p>
   {% if d.device_type and d.device_type.type %}<p class="muted"><b>Looks like a {{ d.device_type.label }}</b>

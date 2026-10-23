@@ -18,6 +18,7 @@ from .grading import (
     destination_country_summary,
     findings_for,
     grade,
+    safety_verdict,
     summarize,
     traffic_pattern_summary,
 )
@@ -215,6 +216,7 @@ def build_devices(
             dest.findings += findings_for_device(dest.ip, upnp)
         dest.score, dest.grade = grade(dest.findings)
         dest.summary = summarize(dest)
+        dest.verdict = safety_verdict(dest)
 
     return sorted(devices.values(), key=lambda d: d.ip)
 
@@ -263,6 +265,7 @@ def to_dict(dev: Device) -> dict:
         "profile": dev.profile,
         "grade": dev.grade,
         "score": dev.score,
+        "verdict": dev.verdict,
         "summary": dev.summary,
         "idle_upload": dev.idle_upload,
         "findings": dev.findings,

@@ -20,7 +20,10 @@ def create_server():
     @mcp.tool()
     def analyze_pcap(path: str, device_ips: list[str] | None = None,
                      report_path: str | None = None) -> list[dict]:
-        """Analyse a pcap of your own network: per-device destinations, plaintext vs TLS, grade."""
+        """Analyse a pcap of your own network.
+
+        Per-device destinations, plaintext vs TLS, an A-F grade, and a one-line safety verdict.
+        """
         devs = [to_dict(d) for d in build_devices(from_pcap(path, Collector(device_ips)), Geo())]
         if report_path:
             with open(report_path, "w", encoding="utf-8") as fh:
