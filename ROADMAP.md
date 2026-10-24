@@ -88,7 +88,7 @@ Plain-English per-device findings such as:
 - Alerts: new/unexpected device on the network, new destination country, idle upload,
   new open port
 - ARP mode (own network only, extra consent) for devices that cannot be moved to a hotspot
-- PDF export
+- [x] PDF export (0.1.8, optional extra `iotaudit[pdf]`)
 
 ## Verdict
 

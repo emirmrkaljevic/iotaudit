@@ -32,9 +32,9 @@ It answers the questions you actually have about a cheap smart device:
 - **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN, and an honest note
   when a stream was set up but never actually passed through your computer.
 
-> Status: **0.1.7**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.8**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading with a
-> one-line safety verdict, HTML report, a local web UI and the MCP server work. Offline CVE
+> one-line safety verdict, HTML and PDF reports, a local web UI and the MCP server work. Offline CVE
 > hints are on the [roadmap](ROADMAP.md).
 
 ## Sample report
@@ -59,8 +59,9 @@ check (animated SVG, no audio, no tracking):
 
 ```bash
 pipx install iotaudit
-# or with the MCP server extra:
+# or with the MCP server extra, and PDF export:
 pip install "iotaudit[mcp]"
+pip install "iotaudit[pdf]"
 # latest from source:
 pipx install "git+https://github.com/emirmrkaljevic/iotaudit"
 ```
@@ -107,6 +108,31 @@ iotaudit analyze capture.pcap --device 192.168.1.50 --json results.json --out re
 ```
 
 The report lands at `./iotaudit-report.html` with a matching `.json` next to it.
+
+## PDF export
+
+```bash
+pip install "iotaudit[pdf]"
+
+# Writes report.pdf next to report.html:
+iotaudit analyze capture.pcap --device 192.168.1.50 --out report.html --pdf
+sudo "$(which iotaudit)" capture --mode arp --i-own-this-network --pdf
+
+# Convert a report you already saved (HTML, or the JSON list of devices):
+iotaudit report --pdf report.html
+iotaudit report --pdf results.json --out results.pdf
+```
+
+`--pdf` on `analyze` and `capture` writes a PDF next to the HTML. Print styles put the grade
+and verdict at the top of each device (the first device shares page 1 with the title; every
+later device starts on a new page), keep table rows in one piece, and repeat the table header.
+The on-screen traffic chart is left out of the PDF.
+
+The renderer is xhtml2pdf, a pure-Python extra (`xhtml2pdf`, pulled in by `iotaudit[pdf]`).
+No Cairo or Pango install is required. If the extra is not installed, `analyze` and `capture`
+still write the HTML and print one install line. `iotaudit report --pdf` prints that same line
+and exits, because the PDF is its only output. The MCP tool `analyze_pcap` takes `pdf=true`
+together with `report_path` and writes the PDF beside the HTML.
 
 ## IPv6, P2P video, and "not observed"
 

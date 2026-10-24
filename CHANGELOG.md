@@ -3,6 +3,20 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.8] - 2026-10-24
+
+### Added
+- **PDF export.** `iotaudit analyze` and `iotaudit capture` take `--pdf` and write a PDF
+  next to the HTML report. `iotaudit report --pdf <json-or-html>` converts a saved JSON
+  or HTML report. Install the optional extra with `pip install "iotaudit[pdf]"` (xhtml2pdf,
+  pure Python, no Cairo or Pango). If that extra is missing, the command prints one install
+  line instead of crashing. Analyze and capture still write the HTML.
+- Print styles so each device starts with its grade and verdict, table rows stay on one
+  page, and the destination table header repeats. The on-screen traffic chart is omitted
+  from print and PDF.
+- MCP `analyze_pcap` accepts `pdf=true`. With `report_path` set, it writes the PDF beside
+  the HTML.
+
 ## [0.1.7] - 2026-10-23
 
 ### Changed
