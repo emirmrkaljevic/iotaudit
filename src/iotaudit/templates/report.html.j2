@@ -23,16 +23,32 @@ padding:.35rem;text-align:left;vertical-align:top}
 .chart .bar{flex:1;background:#4c9a2a;min-width:2px;border-radius:2px 2px 0 0}
 .chart .bar.active{background:#c2410c}
 .chart .bar.idle{background:#a8c5a0}
+@page { size: A4; margin: 14mm 12mm; }
+@media print {
+  body { max-width: none; margin: 0; padding: 0; }
+  .card { border: none; padding: 0; margin: 0; border-radius: 0; }
+  .device-next { page-break-before: always; break-before: page; }
+  .device-head { page-break-inside: avoid; break-inside: avoid; }
+  .grade { float: none; display: inline-block; vertical-align: top;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .chart { display: none; }
+  table { width: 100%; font-size: 8.5pt; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; break-inside: avoid; }
+  td, th { overflow-wrap: anywhere; word-wrap: break-word; }
+}
 </style></head><body>
 <h1>iotaudit report</h1>
 <p class="muted">Generated {{ generated }} &middot; iotaudit {{ version }}{% if meta.source %} &middot; source: {{ meta.source }}{% endif %}{% if meta.duration %} &middot; capture {{ meta.duration }}s{% endif %}{% if meta.upnp %} &middot; UPnP: {{ meta.upnp }}{% endif %}</p>
 <p class="muted">Findings are indicators based on observed traffic, not proof of wrongdoing by any vendor.
 All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
 {% for d in devices %}
-<div class="card">
-  <div class="grade g{{ d.grade }}">{{ d.grade }}</div>
-  <h2>{{ d.ip }}</h2>
-  {% if d.verdict %}<p class="verdict"><b>Verdict.</b> {{ d.verdict }}</p>{% endif %}
+<div class="card device{% if not loop.first %} device-next{% endif %}">
+  <div class="device-head">
+    <div class="grade g{{ d.grade }}">{{ d.grade }}</div>
+    <h2>{{ d.ip }}</h2>
+    {% if d.verdict %}<p class="verdict"><b>Verdict.</b> {{ d.verdict }}</p>{% endif %}
+  </div>
   <p class="muted">MAC {{ d.mac or "?" }} &middot; {{ d.vendor or "unknown vendor" }}
   {% if d.profile %}&middot; profile: {{ d.profile }}{% endif %} &middot; score {{ d.score }}/100</p>
   {% if d.device_type and d.device_type.type %}<p class="muted"><b>Looks like a {{ d.device_type.label }}</b>
@@ -101,7 +117,7 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
     <li><span class="{{ f.severity }}">[{{ f.severity }}]</span> <b>{{ f.title }}</b>: {{ f.detail }}{% if f.confidence and f.confidence != "certain" %} <span class="tag">confidence: {{ f.confidence }}</span>{% endif %}</li>
   {% endfor %}</ul>{% else %}<p>No issues observed.</p>{% endif %}
   <h3>Internet destinations</h3>
-  <table><tr><th>Domain(s)</th><th>IP</th><th>Country</th><th>Organisation</th><th>Ports / proto</th><th>Bytes</th><th>Encryption</th><th>Class</th></tr>
+  <table repeat="1"><thead><tr><th>Domain(s)</th><th>IP</th><th>Country</th><th>Organisation</th><th>Ports / proto</th><th>Bytes</th><th>Encryption</th><th>Class</th></tr></thead><tbody>
   {% for x in d.destinations %}<tr>
     <td>{{ x.domains|join(", ") or "none" }}{% if x.tracker %} <span class="tag">tracker</span>{% endif %}</td>
     <td>{{ x.ip }}</td><td>{{ x.country or "?" }}</td><td>{{ x.org or "?" }}</td>
@@ -120,21 +136,21 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
         {% if x.traffic_class.detail %}<br><span class="muted">{{ x.traffic_class.detail }}</span>{% endif %}
         {% else %}none{% endif %}</td>
   </tr>{% endfor %}
-  </table>
+  </tbody></table>
   {% if d.lan_peers %}
   <h3>LAN peers (same Wi-Fi, often phone P2P video)</h3>
-  <table><tr><th>IP</th><th>Ports</th><th>Bytes</th><th>Class</th></tr>
+  <table repeat="1"><thead><tr><th>IP</th><th>Ports</th><th>Bytes</th><th>Class</th></tr></thead><tbody>
   {% for x in d.lan_peers %}<tr>
     <td>{{ x.ip }}{% if x.special_use %} <span class="tag">special-use / not a real device</span>{% endif %}</td>
     <td>{{ x.ports|join(", ") }}</td><td>{{ x.bytes_out }} out / {{ x.bytes_in or 0 }} in</td>
     <td>{% if x.special_use %}<span class="muted">bogon/placeholder</span>{% elif x.traffic_class %}looks like {{ x.traffic_class.display or x.traffic_class.label }} <span class="tag">confidence: {{ x.traffic_class.confidence }}</span>{% else %}none{% endif %}</td>
   </tr>{% endfor %}
-  </table>
+  </tbody></table>
   {% endif %}
   {% if d.open_ports %}<h3>Open ports (LAN)</h3>
-  <table><tr><th>Port</th><th>Service</th><th>Product</th><th>Risk</th></tr>
+  <table repeat="1"><thead><tr><th>Port</th><th>Service</th><th>Product</th><th>Risk</th></tr></thead><tbody>
   {% for p in d.open_ports %}<tr><td>{{ p.port }}/{{ p.proto }}</td><td>{{ p.service }}</td><td>{{ p.product }}</td>
-  <td class="{{ p.risk }}">{{ p.risk or "" }}</td></tr>{% endfor %}</table>{% endif %}
+  <td class="{{ p.risk }}">{{ p.risk or "" }}</td></tr>{% endfor %}</tbody></table>{% endif %}
 </div>
 {% else %}<p>No devices observed.</p>{% endfor %}
 </body></html>

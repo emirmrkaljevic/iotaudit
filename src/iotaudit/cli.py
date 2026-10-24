@@ -7,11 +7,14 @@ import json
 import sys
 from pathlib import Path
 
+from jinja2 import TemplateError
+
 from . import __version__
 from .analyze import build_devices, to_dict
 from .capture import Collector, build_bpf, from_pcap, live
 from .consent import require_consent
 from .enrich import Geo
+from .pdf import PdfExtraMissing, write_pdf
 from .report import render_html
 from .upnp import RISKY_PORTS as RISKY
 
@@ -41,13 +44,75 @@ def _finish(col, args, meta) -> int:
     json_path = args.json or str(Path(args.out).with_suffix(".json"))
     Path(json_path).write_text(json.dumps(devices, indent=2))
     out = Path(args.out)
-    out.write_text(render_html(devices, meta), encoding="utf-8")
+    html = render_html(devices, meta)
+    out.write_text(html, encoding="utf-8")
     for d in devices:
         head = d.get("verdict") or f"grade {d['grade']}"
         print(f"{d['ip']:<16} {head}  ({len(d['destinations'])} destinations, "
               f"{len(d['findings'])} findings)")
     print(f"Report written to {out.resolve()}")
     print(f"JSON written to {Path(json_path).resolve()}")
+    if getattr(args, "pdf", False):
+        pdf_path = out.with_suffix(".pdf")
+        if _emit_pdf(html, pdf_path):
+            print(f"PDF written to {pdf_path.resolve()}")
+    return 0
+
+
+def _emit_pdf(html: str, pdf_path: Path) -> bool:
+    """Write a PDF. On a missing extra, print one hint line and return False."""
+    try:
+        write_pdf(html, pdf_path)
+    except PdfExtraMissing as exc:
+        print(str(exc), file=sys.stderr)
+        return False
+    return True
+
+
+def _html_for_report_input(path: Path) -> str:
+    raw = path.read_text(encoding="utf-8")
+    if path.suffix.lower() in {".html", ".htm"} or raw.lstrip().startswith("<"):
+        return raw
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"not a JSON or HTML report: {path.name}") from exc
+    meta: dict = {}
+    if isinstance(data, dict) and isinstance(data.get("devices"), list):
+        devices = data["devices"]
+        if isinstance(data.get("meta"), dict):
+            meta = data["meta"]
+    elif isinstance(data, list):
+        devices = data
+    else:
+        raise ValueError("report JSON must be a list of devices")
+    try:
+        return render_html(devices, meta)
+    except TemplateError as exc:
+        raise ValueError(f"could not render report JSON: {exc}") from exc
+
+
+def cmd_report(args) -> int:
+    src = Path(args.input)
+    if not src.is_file():
+        print(f"error: not a file: {src}", file=sys.stderr)
+        return 2
+    if not args.pdf:
+        print("Pass --pdf to write a PDF. Example: iotaudit report --pdf report.html",
+              file=sys.stderr)
+        return 2
+    dest = Path(args.out) if args.out else src.with_suffix(".pdf")
+    if dest.resolve() == src.resolve():
+        print("error: PDF output path is the same as the input.", file=sys.stderr)
+        return 2
+    try:
+        html = _html_for_report_input(src)
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    if not _emit_pdf(html, dest):
+        return 1
+    print(f"PDF written to {dest.resolve()}")
     return 0
 
 
@@ -270,6 +335,8 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--device", action="append", help="device IP to focus on (repeatable)")
         sp.add_argument("--out", default="iotaudit-report.html")
         sp.add_argument("--json", help="also write JSON results here")
+        sp.add_argument("--pdf", action="store_true",
+                        help='also write a PDF next to the HTML (needs: pip install "iotaudit[pdf]")')
         sp.add_argument("--geoip", help="path to a GeoLite2/DB-IP country .mmdb")
         sp.add_argument("--profiles", help="extra directory of device profile YAML files")
         sp.add_argument("--scan", action=argparse.BooleanOptionalAction, default=True,
@@ -303,6 +370,13 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("pcap")
     common(a)
     a.set_defaults(func=cmd_analyze)
+
+    r = sub.add_parser("report", help="write a PDF from a saved JSON or HTML report")
+    r.add_argument("input", help="saved device JSON, or an HTML report")
+    r.add_argument("--pdf", action="store_true",
+                   help='write a PDF next to the input (needs: pip install "iotaudit[pdf]")')
+    r.add_argument("--out", help="PDF path (default: the input path with a .pdf suffix)")
+    r.set_defaults(func=cmd_report)
 
     s = sub.add_parser("scan", help="nmap open-port scan of one device")
     s.add_argument("ip")

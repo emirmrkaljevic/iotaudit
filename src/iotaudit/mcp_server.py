@@ -19,15 +19,30 @@ def create_server():
 
     @mcp.tool()
     def analyze_pcap(path: str, device_ips: list[str] | None = None,
-                     report_path: str | None = None) -> list[dict]:
+                     report_path: str | None = None, pdf: bool = False) -> list[dict]:
         """Analyse a pcap of your own network.
 
         Per-device destinations, plaintext vs TLS, an A-F grade, and a one-line safety verdict.
+        When report_path is set, write the HTML report there. pdf=true also writes a PDF
+        next to that HTML (same name, .pdf suffix) and needs the iotaudit[pdf] extra.
         """
+        if pdf and not report_path:
+            raise ValueError("pdf=true needs report_path so the PDF is written next to the HTML.")
         devs = [to_dict(d) for d in build_devices(from_pcap(path, Collector(device_ips)), Geo())]
         if report_path:
+            html = render_html(devs, {"source": path})
             with open(report_path, "w", encoding="utf-8") as fh:
-                fh.write(render_html(devs, {"source": path}))
+                fh.write(html)
+            if pdf:
+                from pathlib import Path
+
+                from .pdf import PdfExtraMissing, write_pdf
+
+                pdf_path = Path(report_path).with_suffix(".pdf")
+                try:
+                    write_pdf(html, pdf_path)
+                except PdfExtraMissing as exc:
+                    raise ValueError(str(exc)) from None
         return devs
 
     @mcp.tool()
