@@ -13,6 +13,7 @@ from . import __version__
 from .analyze import build_devices, to_dict
 from .capture import Collector, build_bpf, from_pcap, live
 from .consent import require_consent
+from .diff import audit_from_devices, diff_audits, diff_results, format_diff, load_audit
 from .enrich import Geo
 from .pdf import PdfExtraMissing, write_pdf
 from .report import render_html
@@ -41,6 +42,14 @@ def _finish(col, args, meta) -> int:
     peer_labels = getattr(args, "_peer_labels", None) or {}
     devices = [to_dict(d) for d in build_devices(
         col, Geo(args.geoip), args.profiles, scans, peer_labels=peer_labels, upnp=upnp)]
+    compare = getattr(args, "compare", None)
+    previous = None
+    compare_error = None
+    if compare:
+        try:
+            previous = load_audit(compare)
+        except (OSError, UnicodeError, ValueError) as exc:
+            compare_error = exc
     json_path = args.json or str(Path(args.out).with_suffix(".json"))
     Path(json_path).write_text(json.dumps(devices, indent=2))
     out = Path(args.out)
@@ -56,6 +65,17 @@ def _finish(col, args, meta) -> int:
         pdf_path = out.with_suffix(".pdf")
         if _emit_pdf(html, pdf_path):
             print(f"PDF written to {pdf_path.resolve()}")
+    if compare_error is not None:
+        print(f"error: --compare: {compare_error}", file=sys.stderr)
+        return 2
+    if previous is not None:
+        result = diff_audits(
+            previous, audit_from_devices(devices),
+            old_label=str(compare), new_label=str(json_path),
+        )
+        print()
+        print(format_diff(result), end="")
+        return 1 if result["security_relevant"] else 0
     return 0
 
 
@@ -303,6 +323,19 @@ def cmd_analyze(args) -> int:
     return _finish(col, args, {"source": args.pcap})
 
 
+def cmd_diff(args) -> int:
+    try:
+        result = diff_results(args.old, args.new)
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print(format_diff(result), end="")
+    return result["exit_code"]
+
+
 def cmd_scan(args) -> int:
     if not require_consent(args.i_own_this_network):
         return 2
@@ -344,6 +377,8 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--upnp", action=argparse.BooleanOptionalAction, default=False,
                         help="list router UPnP port forwards to the device (read-only; "
                              "default on for capture, off for analyze)")
+        sp.add_argument("--compare", metavar="PREV.json",
+                        help="after the report, diff it against this earlier JSON audit")
 
     c = sub.add_parser("capture", help="live capture (hotspot recommended)")
     c.add_argument("--mode", choices=["hotspot", "iface", "arp"], default="hotspot",
@@ -370,6 +405,12 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("pcap")
     common(a)
     a.set_defaults(func=cmd_analyze)
+
+    d = sub.add_parser("diff", help="compare two JSON audits (exit 1 when new risk appeared)")
+    d.add_argument("old", help="earlier JSON results")
+    d.add_argument("new", help="later JSON results")
+    d.add_argument("--json", action="store_true", help="print machine-readable JSON")
+    d.set_defaults(func=cmd_diff)
 
     r = sub.add_parser("report", help="write a PDF from a saved JSON or HTML report")
     r.add_argument("input", help="saved device JSON, or an HTML report")

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from .analyze import build_devices, to_dict
 from .capture import Collector, from_pcap, live
+from .diff import diff_results as compare_audits
 from .enrich import Geo
 from .report import render_html
 
@@ -77,6 +78,19 @@ def create_server():
             raise ValueError("User must confirm they own this device.")
         results = check_device(ip, services or ["telnet"], confirmed=True)
         return [r.as_finding() for r in results]
+
+    @mcp.tool()
+    def diff_results(old_path: str, new_path: str) -> dict:
+        """Compare two saved iotaudit JSON audits.
+
+        Matches devices by MAC, then by IP. Reports new and gone destination
+        domains and IPs, new countries, new open ports, grade and verdict
+        changes, newly seen unencrypted traffic, and new UPnP forwards when
+        the JSON contains them. security_relevant is true, and exit_code is 1,
+        when a device, destination, country, open port, worse grade,
+        unencrypted flow, or UPnP forward appeared.
+        """
+        return compare_audits(old_path, new_path)
 
     @mcp.tool()
     def upnp_port_mappings() -> dict:
