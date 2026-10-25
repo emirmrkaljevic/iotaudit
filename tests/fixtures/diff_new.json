@@ -1,0 +1,102 @@
+[
+  {
+    "ip": "192.168.1.11",
+    "mac": "02:00:00:00:00:01",
+    "vendor": "Example Vendor",
+    "grade": "D",
+    "score": 48,
+    "verdict": "D: Telnet open on the LAN; plaintext traffic to the internet (US, DE).",
+    "destinations": [
+      {
+        "ip": "203.0.113.10",
+        "domains": ["api.example"],
+        "country": "US",
+        "ports": [443],
+        "encrypted": true,
+        "encryption_kind": "tls"
+      },
+      {
+        "ip": "198.51.100.50",
+        "domains": ["logs.example"],
+        "country": "DE",
+        "ports": [80],
+        "encrypted": false,
+        "encryption_kind": "plaintext"
+      }
+    ],
+    "destination_countries": [
+      {"country": "US", "destinations": 1, "bytes_out": 80, "bytes_in": 20, "orgs": ["Example Org"]},
+      {"country": "DE", "destinations": 1, "bytes_out": 40, "bytes_in": 10, "orgs": ["Example Org"]}
+    ],
+    "dns_queries": ["api.example", "logs.example"],
+    "open_ports": [
+      {"port": 80, "proto": "tcp", "service": "http", "risk": "low"},
+      {"port": 23, "proto": "tcp", "service": "telnet", "risk": "high"}
+    ],
+    "findings": [
+      {
+        "category": "upnp",
+        "severity": "high",
+        "title": "Port 554/TCP forwarded to this device via UPnP (RTSP video)",
+        "detail": "The router forwards public port 554 to 192.168.1.11:554 (from anywhere); description \"rtsp\".",
+        "confidence": "certain",
+        "evidence": {
+          "external_port": 554,
+          "protocol": "TCP",
+          "internal_port": 554,
+          "description": "rtsp",
+          "remote_host": "",
+          "lease_seconds": 3600
+        }
+      }
+    ]
+  },
+  {
+    "ip": "192.168.1.30",
+    "mac": null,
+    "vendor": "Example Vendor",
+    "grade": "C",
+    "score": 70,
+    "verdict": "C: encrypted cloud traffic (DE).",
+    "destinations": [
+      {
+        "ip": "198.51.100.10",
+        "domains": ["telemetry.example"],
+        "country": "DE",
+        "ports": [443],
+        "encrypted": true,
+        "encryption_kind": "tls"
+      }
+    ],
+    "destination_countries": [
+      {"country": "DE", "destinations": 1, "bytes_out": 50, "bytes_in": 20, "orgs": ["Example Org"]}
+    ],
+    "dns_queries": ["telemetry.example"],
+    "open_ports": [],
+    "findings": []
+  },
+  {
+    "ip": "192.168.1.40",
+    "mac": "02:00:00:00:00:04",
+    "vendor": "Example Vendor",
+    "grade": "C",
+    "score": 75,
+    "verdict": "C: encrypted cloud traffic (US).",
+    "destinations": [
+      {
+        "ip": "192.0.2.10",
+        "domains": ["setup.example"],
+        "country": "US",
+        "ports": [443],
+        "encrypted": true,
+        "encryption_kind": "tls"
+      }
+    ],
+    "destination_countries": [
+      {"country": "US", "destinations": 1, "bytes_out": 10, "bytes_in": 10, "orgs": ["Example Org"]}
+    ],
+    "dns_queries": ["setup.example"],
+    "open_ports": [],
+    "findings": []
+  }
+]

@@ -1,0 +1,73 @@
+[
+  {
+    "ip": "192.168.1.10",
+    "mac": "02:00:00:00:00:01",
+    "vendor": "Example Vendor",
+    "grade": "B",
+    "score": 82,
+    "verdict": "B: encrypted cloud traffic (US).",
+    "destinations": [
+      {
+        "ip": "203.0.113.10",
+        "domains": ["api.example"],
+        "country": "US",
+        "ports": [443],
+        "encrypted": true,
+        "encryption_kind": "tls"
+      },
+      {
+        "ip": "203.0.113.20",
+        "domains": ["files.example"],
+        "country": "US",
+        "ports": [443],
+        "encrypted": true,
+        "encryption_kind": "tls"
+      }
+    ],
+    "destination_countries": [
+      {"country": "US", "destinations": 2, "bytes_out": 100, "bytes_in": 40, "orgs": ["Example Org"]}
+    ],
+    "dns_queries": ["api.example", "files.example"],
+    "open_ports": [
+      {"port": 80, "proto": "tcp", "service": "http", "risk": "low"}
+    ],
+    "findings": []
+  },
+  {
+    "ip": "192.168.1.20",
+    "mac": "02:00:00:00:00:02",
+    "vendor": "Example Vendor",
+    "grade": "A",
+    "score": 100,
+    "verdict": "A: little traffic observed, so this grade is not conclusive.",
+    "destinations": [],
+    "destination_countries": [],
+    "dns_queries": [],
+    "open_ports": [],
+    "findings": []
+  },
+  {
+    "ip": "192.168.1.30",
+    "mac": null,
+    "vendor": "Example Vendor",
+    "grade": "C",
+    "score": 70,
+    "verdict": "C: encrypted cloud traffic (DE).",
+    "destinations": [
+      {
+        "ip": "198.51.100.10",
+        "domains": ["telemetry.example"],
+        "country": "DE",
+        "ports": [443],
+        "encrypted": true,
+        "encryption_kind": "tls"
+      }
+    ],
+    "destination_countries": [
+      {"country": "DE", "destinations": 1, "bytes_out": 50, "bytes_in": 20, "orgs": ["Example Org"]}
+    ],
+    "dns_queries": ["telemetry.example"],
+    "open_ports": [],
+    "findings": []
+  }
+]

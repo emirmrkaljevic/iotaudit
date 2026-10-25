@@ -88,7 +88,7 @@ def test_mcp_tools():
     from iotaudit.mcp_server import create_server
 
     names = {t.name for t in asyncio.run(create_server().list_tools())}
-    assert {"analyze_pcap", "capture", "scan_device"} <= names
+    assert {"analyze_pcap", "capture", "scan_device", "diff_results"} <= names
 
 
 def test_arp_safety_and_forwarding():
