@@ -31,10 +31,13 @@ It answers the questions you actually have about a cheap smart device:
 - **Does it phone home while idle?** Idle-upload check and a traffic timeline with bursts.
 - **Where did the video go?** LAN peer (phone P2P) vs cloud vs STUN/TURN, and an honest note
   when a stream was set up but never actually passed through your computer.
+- **What changed since the last audit?** `iotaudit diff` compares two saved JSON
+  results and exits 1 when a new destination, country, open port, worse grade,
+  unencrypted flow, UPnP forward, or device appeared.
 
-> Status: **0.1.8**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.9**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading with a
-> one-line safety verdict, HTML and PDF reports, a local web UI and the MCP server work. Offline CVE
+> one-line safety verdict, HTML and PDF reports, a diff between two audits, a local web UI and the MCP server work. Offline CVE
 > hints are on the [roadmap](ROADMAP.md).
 
 ## Sample report
@@ -134,6 +137,56 @@ still write the HTML and print one install line. `iotaudit report --pdf` prints 
 and exits, because the PDF is its only output. The MCP tool `analyze_pcap` takes `pdf=true`
 together with `report_path` and writes the PDF beside the HTML.
 
+## Compare two audits
+
+```bash
+iotaudit diff "$HOME/iotaudit/yesterday.json" "$HOME/iotaudit/today.json"
+iotaudit diff "$HOME/iotaudit/yesterday.json" "$HOME/iotaudit/today.json" --json
+
+# Same diff, printed after the HTML and JSON report:
+iotaudit analyze capture.pcap --device 192.168.1.50 \
+    --json "$HOME/iotaudit/today.json" --out "$HOME/iotaudit/today.html" \
+    --compare "$HOME/iotaudit/yesterday.json"
+```
+
+Devices match by MAC. If either side has no MAC, they match by IP. A different MAC at
+the same IP is one device gone and one device new. For each device the report lists new
+and gone destination domains and IPs, new countries, new open ports, grade changes,
+verdict changes, newly seen unencrypted traffic, and new UPnP forwards when the JSON
+has them.
+
+Exit code **1** when something security-relevant appeared: a device, a destination
+domain or IP, a country, an open port, a worse grade, unencrypted traffic, or a UPnP
+forward. Exit code **0** otherwise, including when the only changes are departures or
+a better grade. A verdict change is printed either way and does not by itself exit 1.
+Missing or unreadable input exits 2. With `--compare`, `capture` and `analyze` use
+that same code after they write the report.
+
+`capture` and `analyze` already write JSON (next to the HTML, or at `--json`). Keep
+the previous file and pass it as `--compare`, or run `diff` on the two files later.
+`--json` on `diff` prints the machine-readable result. On `capture` and `analyze`,
+`--json` is still the path of the results file.
+
+Cron stays quiet when nothing new showed up. This script prints the diff, and exits
+1, only when something security-relevant appeared:
+
+```sh
+#!/bin/sh
+# 15 6 * * 1-5 "$HOME/iotaudit/check.sh"
+report=$(iotaudit diff "$HOME/iotaudit/yesterday.json" "$HOME/iotaudit/today.json") || {
+    printf '%s\n' "$report"
+    exit 1
+}
+exit 0
+```
+
+LAN peers are not compared. Open ports are the scanned `open_ports`, not the remote
+port a destination was contacted on. UPnP is read from findings with category `upnp`,
+or from a top-level `upnp.mappings` list joined on `internal_client`. An audit saved
+without a UPnP check has no forwards, so the next audit's forwards show up as new.
+Other findings are not listed one by one; a grade or verdict change still shows when
+those findings moved the grade or the verdict.
+
 ## IPv6, P2P video, and "not observed"
 
 Live video from a camera or feeder often does **not** go to the cloud: it goes **directly to your
@@ -192,6 +245,8 @@ answers private-range clients. iPhones can use the web UI but cannot capture on 
 ```bash
 iotaudit-mcp        # exposes audit tools to a local assistant ("audit my pet feeder")
 ```
+
+`diff_results` compares two saved JSON audits the same way `iotaudit diff` does.
 
 ## Consent & scope
 

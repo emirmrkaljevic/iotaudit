@@ -437,6 +437,24 @@ def test_finish_still_writes_the_report_when_compare_file_is_missing(tmp_path, c
     assert out.is_file() and out.with_suffix(".json").is_file()
 
 
+def test_readme_and_changelog_document_diff():
+    root = Path(__file__).resolve().parents[1]
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "iotaudit diff" in readme and "--compare" in readme and "cron" in readme.lower()
+    assert "0.1.9" in readme
+    assert "## [0.1.9]" in changelog and "iotaudit diff" in changelog
+    version = (root / "src/iotaudit/__init__.py").read_text(encoding="utf-8")
+    project = (root / "pyproject.toml").read_text(encoding="utf-8")
+    server = (root / "server.json").read_text(encoding="utf-8")
+    assert '__version__ = "0.1.9"' in version
+    assert 'version = "0.1.9"' in project
+    assert server.count('"version": "0.1.9"') == 2
+    for dash in _DASHES:
+        assert dash not in readme
+        assert dash not in (root / "src/iotaudit/diff.py").read_text(encoding="utf-8")
+
+
 def test_mcp_diff_results_matches_the_library():
     from iotaudit.mcp_server import create_server
 

@@ -85,8 +85,12 @@ Plain-English per-device findings such as:
 ## v0.5 – Continuous mode
 
 - Raspberry Pi image / OpenWrt package, scheduled reports
-- Alerts: new/unexpected device on the network, new destination country, idle upload,
-  new open port
+- [x] Change detection between two saved audits (0.1.9, `iotaudit diff` and
+  `--compare`): new or gone destination domains and IPs, new countries, new open
+  ports, grade and verdict changes, newly unencrypted traffic, and new UPnP
+  forwards. Exit 1 when something security-relevant appeared.
+- Idle-upload alerts, and a new device noticed during a continuous watch rather
+  than between two saved audits
 - ARP mode (own network only, extra consent) for devices that cannot be moved to a hotspot
 - [x] PDF export (0.1.8, optional extra `iotaudit[pdf]`)
 

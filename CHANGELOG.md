@@ -3,6 +3,27 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.9] - 2026-10-25
+
+### Added
+- **`iotaudit diff OLD.json NEW.json`.** Compares two saved JSON audits. Devices
+  match by MAC, then by IP. The report lists new and gone destination domains
+  and IPs, new countries, new open ports, grade changes, verdict changes,
+  newly seen unencrypted traffic, and new UPnP forwards when the JSON includes
+  them. Plain text by default. `--json` prints the same result for scripts.
+  Exit code 1 when something security-relevant appeared, and 0 otherwise, so
+  cron can alert. Missing or unreadable input exits 2.
+- **`--compare PREV.json`** on `capture` and `analyze`. After the HTML and JSON
+  report, print that diff against an earlier audit and use the same exit code.
+- MCP tool `diff_results` with the same comparison.
+
+### Notes
+- A change is security-relevant when a device, destination domain, destination
+  IP, country, open port, worse grade, unencrypted flow, or UPnP forward
+  appeared. Something that only went away, or a grade that improved, is
+  reported and does not by itself exit 1. A verdict change is reported and
+  does not by itself exit 1.
+
 ## [0.1.8] - 2026-10-24
 
 ### Added
