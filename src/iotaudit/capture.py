@@ -5,6 +5,7 @@ from __future__ import annotations
 import ipaddress
 from collections.abc import Iterable
 
+from .hints import banner_from_payload
 from .models import Flow
 
 TLS_VERSIONS = {0x0301: "TLS1.0", 0x0302: "TLS1.1", 0x0303: "TLS1.2", 0x0304: "TLS1.3"}
@@ -107,6 +108,8 @@ class Collector:
         self.v6_macs: dict[str, str] = {}        # ipv6 -> MAC (for device attribution)
         self.ndp = {"ns": 0, "na": 0, "rs": 0, "ra": 0, "redirect": 0}
         self.ndp_neighbors: dict[str, str] = {}  # ipv6 -> MAC learned from NS/NA
+        # HTTP Server, SSDP, and RTSP auth facts from packets already captured.
+        self.service_banners: dict[str, list[dict]] = {}
 
     def _wanted(self, ip: str) -> bool:
         return (ip in self.device_ips) if self.device_ips else is_private(ip)
@@ -143,6 +146,7 @@ class Collector:
 
         # Outbound from focused device
         if self._wanted(ip.src):
+            self._note_banner(ip.src, int(l4.sport), int(l4.dport), proto, payload)
             self._account(ip.src, ip.dst, l4.dport, proto, len(ip), b, payload, outbound=True,
                           tls_probe=True)
         # Inbound to focused device (bytes_in)
@@ -239,6 +243,16 @@ class Collector:
             "attributed_by_mac": attributed,
             "any_ipv6_seen": bool(flows) or any(self.ndp.values()),
         }
+
+    def _note_banner(self, device_ip: str, sport: int, dport: int, proto: str, payload: bytes) -> None:
+        if not payload:
+            return
+        note = banner_from_payload(payload, sport, dport, proto)
+        if note is None:
+            return
+        bucket = self.service_banners.setdefault(device_ip, [])
+        if note not in bucket and len(bucket) < 8:
+            bucket.append(note)
 
     def _account(self, device_ip, peer_ip, port, proto, nbytes, bucket, payload, *,
                  outbound: bool, tls_probe: bool) -> None:

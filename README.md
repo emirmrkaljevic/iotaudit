@@ -26,6 +26,9 @@ It answers the questions you actually have about a cheap smart device:
   match, not proof of what was sent.
 - **Is it encrypted?** Plaintext HTTP, unencrypted TCP, old TLS, or "custom" high-entropy protocols.
 - **What ports are open?** Optional `nmap` scan with risk notes (telnet, RTSP, UPnP, ADB, …).
+- **Any known issue for this banner?** A short offline hint when a version
+  string matches a curated CVE. It does not change the grade unless the
+  version match is exact and the entry is critical.
 - **Is it reachable from the internet?** Lists the port forwards your router opened via UPnP
   and which device they point to (read-only, never changes the router).
 - **Does it phone home while idle?** Idle-upload check and a traffic timeline with bursts.
@@ -35,10 +38,11 @@ It answers the questions you actually have about a cheap smart device:
   results and exits 1 when a new destination, country, open port, worse grade,
   unencrypted flow, UPnP forward, or device appeared.
 
-> Status: **0.1.9**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.10**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading with a
-> one-line safety verdict, HTML and PDF reports, a diff between two audits, a local web UI and the MCP server work. Offline CVE
-> hints are on the [roadmap](ROADMAP.md).
+> one-line safety verdict, HTML and PDF reports, a diff between two audits, offline known-issue
+> hints, a local web UI and the MCP server work. A full vulnerability feed is still on the
+> [roadmap](ROADMAP.md).
 
 ## Sample report
 
@@ -111,6 +115,51 @@ iotaudit analyze capture.pcap --device 192.168.1.50 --json results.json --out re
 ```
 
 The report lands at `./iotaudit-report.html` with a matching `.json` next to it.
+
+## Known-issue hints
+
+iotaudit compares banners it already has with a small catalog shipped in the
+package (`src/iotaudit/data/known_issues.yaml`). The facts it can use are:
+
+- an open service from the port scan, plus the nmap product and version
+- an HTTP `Server` header from a response the device sent
+- a UPnP or SSDP header (including an InternetGatewayDevice advertisement)
+- an RTSP response that did not ask for authentication, when that was already
+  in the capture or in the scan record
+
+There is no lookup at runtime and no `hints --update-from` command. The file
+changes only when you install a newer iotaudit.
+
+Each hint is a possibility, not proof the firmware is vulnerable. The text
+always includes: possible, based on version string; verify firmware. The
+reference is the NVD page for that CVE.
+
+Hints show in the HTML report, in the PDF (the PDF is the same HTML), in the
+device JSON as `known_issue_hints`, and in the MCP `analyze_pcap` result.
+
+**Grade rule.** A hint does not change the A-F grade unless both are true:
+the observed version string equals a version the entry lists exactly, and the
+entry severity is critical. That case subtracts 25 points, the same as one
+high finding, and the subtraction is applied after the limited-data cap so it
+still moves a thin capture. A version range, a product name without that
+exact version, an open port on its own, or any severity other than critical
+leaves the score unchanged. Telnet being open, an exposed UPnP IGD, or RTSP
+with no authentication is not by itself a CVE. The catalog cites one only
+when the banner or the service fact matches that entry.
+
+Limits:
+
+- The file is a short curated list (on the order of 10 to 20 issues), not the
+  NVD and not a firmware database.
+- A patched device can still show an old version string. An unpatched device
+  can hide the version. Either way the hint says to verify the firmware.
+- Banners are read from IPv4 packets and from the nmap record. IPv6 service
+  banners are not parsed.
+- RTSP with no authentication is recorded when a captured RTSP `200` has no
+  `WWW-Authenticate` header, or when the scan extra info already says so. The
+  shipped list does not treat that fact alone as a CVE. It is mentioned on a
+  hint when a versioned RTSP entry also matches.
+- No network access is used to refresh the list.
 
 ## PDF export
 

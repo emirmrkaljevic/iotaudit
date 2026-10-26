@@ -3,6 +3,27 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.10] - 2026-10-26
+
+### Added
+- **Offline known-issue hints.** A small curated catalog shipped in the package
+  maps banners iotaudit already observed (nmap product and version, HTTP
+  `Server`, UPnP and SSDP headers, and an RTSP response that did not ask for
+  authentication) to a public NVD CVE page. Each hint says it is possible,
+  based on the version string, and that the firmware still has to be checked.
+  There is no network lookup and no update command. The list is whatever
+  shipped with this release.
+- Hints are on each device as `known_issue_hints` in the JSON report, in the
+  HTML report (and therefore the PDF), and in the MCP `analyze_pcap` result.
+
+### Grade rule
+- A hint does not change the A-F grade unless both are true: the observed
+  version string equals a version the entry lists exactly, and the entry
+  severity is critical. That case subtracts 25 points, the same as one high
+  finding, after the limited-data cap. A version range, an open service with
+  no matching version, or any severity other than critical leaves the score
+  unchanged.
+
 ## [0.1.9] - 2026-10-25
 
 ### Added

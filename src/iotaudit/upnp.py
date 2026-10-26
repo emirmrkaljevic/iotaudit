@@ -97,6 +97,7 @@ def parse_description(xml: bytes, location: str) -> dict:
     root = ET.fromstring(xml)
     base = location
     name = model = None
+    igd = False
     for el in root.iter():
         t = _strip_ns(el.tag)
         if t == "URLBase" and (el.text or "").strip():
@@ -105,6 +106,8 @@ def parse_description(xml: bytes, location: str) -> dict:
             name = (el.text or "").strip()
         elif t == "modelName" and model is None:
             model = (el.text or "").strip()
+        elif t == "deviceType" and "InternetGatewayDevice" in (el.text or ""):
+            igd = True
     services = {}
     for svc in root.iter():
         if _strip_ns(svc.tag) != "service":
@@ -114,8 +117,9 @@ def parse_description(xml: bytes, location: str) -> dict:
             services[fields["serviceType"]] = urljoin(base, fields["controlURL"])
     for st in WAN_SERVICES:
         if st in services:
-            return {"service": st, "control_url": services[st], "name": name, "model": model}
-    return {"service": None, "control_url": None, "name": name, "model": model}
+            return {"service": st, "control_url": services[st], "name": name, "model": model,
+                    "igd": igd}
+    return {"service": None, "control_url": None, "name": name, "model": model, "igd": igd}
 
 
 def soap(control_url: str, service: str, action: str, args: dict | None = None) -> dict:

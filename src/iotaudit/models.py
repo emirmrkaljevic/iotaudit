@@ -91,6 +91,7 @@ class Device:
     lan_peers: dict[str, Destination] = field(default_factory=dict)
     dns_queries: set[str] = field(default_factory=set)
     open_ports: list[dict] = field(default_factory=list)
+    known_issue_hints: list[dict] = field(default_factory=list)
     findings: list[dict] = field(default_factory=list)
     grade: str | None = None
     score: int | None = None

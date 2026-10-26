@@ -442,14 +442,15 @@ def test_readme_and_changelog_document_diff():
     readme = (root / "README.md").read_text(encoding="utf-8")
     changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "iotaudit diff" in readme and "--compare" in readme and "cron" in readme.lower()
-    assert "0.1.9" in readme
+    assert "0.1.10" in readme
     assert "## [0.1.9]" in changelog and "iotaudit diff" in changelog
+    assert "## [0.1.10]" in changelog and "known_issue_hints" in changelog
     version = (root / "src/iotaudit/__init__.py").read_text(encoding="utf-8")
     project = (root / "pyproject.toml").read_text(encoding="utf-8")
     server = (root / "server.json").read_text(encoding="utf-8")
-    assert '__version__ = "0.1.9"' in version
-    assert 'version = "0.1.9"' in project
-    assert server.count('"version": "0.1.9"') == 2
+    assert '__version__ = "0.1.10"' in version
+    assert 'version = "0.1.10"' in project
+    assert server.count('"version": "0.1.10"') == 2
     for dash in _DASHES:
         assert dash not in readme
         assert dash not in (root / "src/iotaudit/diff.py").read_text(encoding="utf-8")

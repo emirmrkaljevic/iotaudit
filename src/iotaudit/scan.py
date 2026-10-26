@@ -45,13 +45,17 @@ def parse_nmap_xml(xml: str) -> list[dict]:
             continue
         svc = port.find("service")
         num = int(port.get("portid"))
+        product_name = svc.get("product") if svc is not None and svc.get("product") else ""
+        version = svc.get("version") if svc is not None and svc.get("version") else ""
+        extrainfo = svc.get("extrainfo") if svc is not None and svc.get("extrainfo") else ""
         info = {
             "port": num,
             "proto": port.get("protocol"),
             "service": svc.get("name") if svc is not None else None,
-            "product": " ".join(
-                x for x in [svc.get("product"), svc.get("version")] if x
-            ) if svc is not None else "",
+            "product": " ".join(x for x in (product_name, version) if x),
+            "product_name": product_name,
+            "version": version,
+            "extrainfo": extrainfo,
         }
         if num in RISKY_PORTS:
             info["risk"], info["why"] = RISKY_PORTS[num][1], RISKY_PORTS[num][2]

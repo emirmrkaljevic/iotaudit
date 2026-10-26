@@ -15,7 +15,7 @@ text-align:center;border-radius:10px;color:#fff}
 .gE{background:#c2410c}.gF{background:#b91c1c}
 table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{border-bottom:1px solid #eee;
 padding:.35rem;text-align:left;vertical-align:top}
-.high{color:#b91c1c;font-weight:600}.medium{color:#c2410c}.low{color:#666}
+.critical{color:#b91c1c;font-weight:700}.high{color:#b91c1c;font-weight:600}.medium{color:#c2410c}.low{color:#666}
 .tag{display:inline-block;padding:0 .4rem;border-radius:4px;font-size:.8rem;background:#eee}
 .fact{display:inline-block;padding:0 .4rem;border-radius:4px;font-size:.8rem;background:#e7f3ea;color:#1a7f37}
 .indicator{display:inline-block;padding:0 .4rem;border-radius:4px;font-size:.8rem;background:#fff4e5;color:#9a6700}
@@ -116,6 +116,19 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
   {% if d.findings %}<ul>{% for f in d.findings %}
     <li><span class="{{ f.severity }}">[{{ f.severity }}]</span> <b>{{ f.title }}</b>: {{ f.detail }}{% if f.confidence and f.confidence != "certain" %} <span class="tag">confidence: {{ f.confidence }}</span>{% endif %}</li>
   {% endfor %}</ul>{% else %}<p>No issues observed.</p>{% endif %}
+  {% if d.known_issue_hints %}
+  <h3>Known issue hints</h3>
+  <p class="muted">Offline catalog matches from banners already observed. Each line is a possibility, not a confirmed firmware flaw. A hint changes the grade only when the version match is exact and the severity is critical (25 points, the same as one high finding).</p>
+  <ul>{% for h in d.known_issue_hints %}
+    <li><span class="{{ h.severity }}">[{{ h.severity }}]</span> <b>{{ h.cve }}</b> {{ h.title }}. {{ h.detail }}
+      <span class="muted">{{ h.observed }}</span>
+      <a href="{{ h.reference }}">{{ h.reference }}</a>
+      {% if h.affects_grade %}<span class="tag">counts toward the grade</span>{% else %}<span class="tag">does not change the grade</span>{% endif %}
+    </li>
+  {% endfor %}</ul>
+  {% elif d.known_issue_hints is defined and d.open_ports %}
+  <p class="muted">No curated known-issue hint matched the banners observed.</p>
+  {% endif %}
   <h3>Internet destinations</h3>
   <table repeat="1"><thead><tr><th>Domain(s)</th><th>IP</th><th>Country</th><th>Organisation</th><th>Ports / proto</th><th>Bytes</th><th>Encryption</th><th>Class</th></tr></thead><tbody>
   {% for x in d.destinations %}<tr>
