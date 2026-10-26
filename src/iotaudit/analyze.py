@@ -22,6 +22,7 @@ from .grading import (
     summarize,
     traffic_pattern_summary,
 )
+from .hints import hints_for_device
 from .models import Destination, Device, TrafficClass
 from .profiles import is_expected, load_profiles, match_profile
 from .traffic import PATTERN_DISPLAY, classify_traffic, detect_bursts, encryption_verdict, merge_series
@@ -214,7 +215,11 @@ def build_devices(
             from .upnp import findings_for_device
 
             dest.findings += findings_for_device(dest.ip, upnp)
-        dest.score, dest.grade = grade(dest.findings)
+        dest.__dict__["service_banners"] = list(
+            getattr(col, "service_banners", {}).get(dest.ip) or []
+        )
+        dest.known_issue_hints = hints_for_device(dest, upnp=upnp)
+        dest.score, dest.grade = grade(dest.findings, dest.known_issue_hints)
         dest.summary = summarize(dest)
         dest.verdict = safety_verdict(dest)
 
@@ -270,6 +275,7 @@ def to_dict(dev: Device) -> dict:
         "idle_upload": dev.idle_upload,
         "findings": dev.findings,
         "open_ports": dev.open_ports,
+        "known_issue_hints": list(dev.known_issue_hints),
         "dns_queries": sorted(dev.dns_queries),
         "destinations": [
             _dest_dict(d)

@@ -8,6 +8,7 @@ is never worded as proof, and nothing here accuses a vendor.
 from __future__ import annotations
 
 from .enrich import PUBLIC_DNS, is_cgnat, is_special_use
+from .hints import affects_grade
 from .traffic import PATTERN_DISPLAY
 
 PENALTY = {"high": 25, "medium": 10, "low": 4, "info": 0}
@@ -430,13 +431,24 @@ def findings_for(device) -> list[dict]:
     return out
 
 
-def grade(findings: list[dict]) -> tuple[int, str]:
+def grade(findings: list[dict], hints: list[dict] | None = None) -> tuple[int, str]:
+    """Score findings, then apply known-issue hints.
+
+    A hint changes the score only when ``affects_grade`` is true: the observed
+    version matched a catalog version exactly and the entry severity is
+    critical. That case subtracts 25 points, the same as one high finding.
+    The subtraction happens after the limited-data cap, so a critical exact
+    hint still moves a thin capture. Every other hint is ignored here.
+    """
     score = 100
     for x in findings:
         score -= PENALTY.get(x["severity"], 0)
     limited = any(x.get("category") == "coverage" for x in findings)
     if limited:
         score = min(score, 70)
+    for hint in hints or []:
+        if affects_grade(hint):
+            score -= PENALTY["high"]
     score = max(score, 0)
     letter = next(g for t, g in GRADES if score >= t)
     if limited and letter == "A":
@@ -672,7 +684,10 @@ def _letter(device) -> str:
     letter = getattr(device, "grade", None)
     if letter in set("ABCDEF"):
         return letter
-    _, letter = grade(list(getattr(device, "findings", None) or []))
+    _, letter = grade(
+        list(getattr(device, "findings", None) or []),
+        list(getattr(device, "known_issue_hints", None) or []),
+    )
     return letter
 
 

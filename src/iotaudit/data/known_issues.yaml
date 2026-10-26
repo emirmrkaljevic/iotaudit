@@ -1,0 +1,186 @@
+# Offline known-issue hints shipped with iotaudit.
+# The matcher reads this file from the install. It does not fetch updates.
+#
+# Grade rule: a hint changes the score only when the observed version string
+# equals a versions_exact entry and severity is critical. That case subtracts
+# 25 points, the same as one high finding. A range, a service fact, or any
+# other severity leaves the score unchanged.
+
+version: 1
+entries:
+  - id: miniupnpd-1.0-cve-2013-0230
+    cve: CVE-2013-0230
+    severity: critical
+    title: MiniUPnPd 1.0 SOAPAction handler has a stack overflow
+    summary: >
+      MiniUPnPd 1.0 has a stack overflow in the SOAPAction handler
+      (CVE-2013-0230).
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2013-0230
+    match:
+      products: ["miniupnpd"]
+      versions_exact: ["1.0"]
+
+  - id: miniupnpd-before-1.4-cve-2013-0229
+    cve: CVE-2013-0229
+    severity: high
+    title: MiniUPnPd before 1.4 SSDP handler can crash
+    summary: >
+      MiniUPnPd before 1.4 can crash on a crafted SSDP request
+      (CVE-2013-0229).
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2013-0229
+    match:
+      products: ["miniupnpd"]
+      version_below: "1.4"
+
+  - id: dropbear-before-2016.72-cve-2016-3116
+    cve: CVE-2016-3116
+    severity: medium
+    title: Dropbear before 2016.72 has an X11 forwarding restriction bypass
+    summary: >
+      Dropbear SSH before 2016.72 has a CRLF injection in X11 forwarding
+      data (CVE-2016-3116).
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2016-3116
+    match:
+      products: ["dropbear"]
+      version_below: "2016.72"
+
+  - id: dropbear-through-2018.76-cve-2018-15599
+    cve: CVE-2018-15599
+    severity: medium
+    title: Dropbear through 2018.76 can reveal whether a username exists
+    summary: >
+      Dropbear SSH through 2018.76 can be used to tell valid usernames from
+      invalid ones (CVE-2018-15599).
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2018-15599
+    match:
+      products: ["dropbear"]
+      version_at_or_below: "2018.76"
+
+  - id: dropbear-through-2022.83-cve-2023-48795
+    cve: CVE-2023-48795
+    severity: medium
+    title: Dropbear through 2022.83 is affected by the Terrapin SSH flaw
+    summary: >
+      Dropbear SSH through 2022.83 is affected by the Terrapin prefix
+      truncation (CVE-2023-48795).
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2023-48795
+    match:
+      products: ["dropbear"]
+      version_at_or_below: "2022.83"
+
+  - id: goahead-before-3.6.5-cve-2017-17562
+    cve: CVE-2017-17562
+    severity: high
+    title: GoAhead before 3.6.5 can run code when CGI is enabled
+    summary: >
+      Embedthis GoAhead before 3.6.5 can run code if CGI is enabled and a
+      CGI program is dynamically linked (CVE-2017-17562).
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2017-17562
+    match:
+      products: ["goahead"]
+      versions_exact: ["3.6.4"]
+      version_below: "3.6.5"
+
+  - id: lighttpd-before-1.4.50-cve-2018-19052
+    cve: CVE-2018-19052
+    severity: high
+    title: lighttpd before 1.4.50 has an alias path traversal
+    summary: >
+      lighttpd before 1.4.50 has a one-directory path traversal in mod_alias
+      with a specific configuration (CVE-2018-19052).
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2018-19052
+    match:
+      products: ["lighttpd"]
+      version_below: "1.4.50"
+
+  - id: lighttpd-1.4.56-through-1.4.66-cve-2022-41556
+    cve: CVE-2022-41556
+    severity: high
+    title: lighttpd 1.4.56 through 1.4.66 can exhaust connections
+    summary: >
+      lighttpd 1.4.56 through 1.4.66 can run out of connection slots after
+      anomalous TCP behavior (CVE-2022-41556). Fixed in 1.4.67.
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2022-41556
+    match:
+      products: ["lighttpd"]
+      version_at_or_above: "1.4.56"
+      version_at_or_below: "1.4.66"
+
+  - id: busybox-1.16-through-1.33.1-cve-2021-42378
+    cve: CVE-2021-42378
+    severity: high
+    title: BusyBox awk through 1.33.1 has a use-after-free
+    summary: >
+      BusyBox awk from 1.16 through 1.33.1 has a use-after-free in getvar_i
+      (CVE-2021-42378). Fixed in 1.34.0.
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2021-42378
+    match:
+      products: ["busybox"]
+      version_at_or_above: "1.16"
+      version_at_or_below: "1.33.1"
+
+  - id: busybox-1.33-cve-2021-42377
+    cve: CVE-2021-42377
+    severity: high
+    title: BusyBox hush 1.33.0 and 1.33.1 mishandle a crafted command
+    summary: >
+      BusyBox hush 1.33.0 and 1.33.1 can free an attacker-controlled pointer
+      when a crafted command is processed (CVE-2021-42377). Fixed in 1.34.0.
+      Code execution needs rare filtered command input.
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2021-42377
+    match:
+      products: ["busybox"]
+      versions_exact: ["1.33.0", "1.33.1"]
+
+  - id: rompager-4.07-cve-2014-9222
+    cve: CVE-2014-9222
+    severity: critical
+    title: RomPager 4.07 is the Misfortune Cookie release
+    summary: >
+      Allegro RomPager 4.07 is the release named for Misfortune Cookie, a
+      cookie handling flaw (CVE-2014-9222). Later banners are not matched
+      here, because a firmware update can keep an old version string.
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2014-9222
+    match:
+      products: ["rompager"]
+      versions_exact: ["4.07"]
+
+  - id: netkit-telnet-through-0.17-cve-2020-10188
+    cve: CVE-2020-10188
+    severity: critical
+    title: netkit telnetd through 0.17 has a buffer overflow
+    summary: >
+      telnetd in netkit telnet through 0.17 has a buffer overflow in
+      utility.c (CVE-2020-10188). An open telnet port with no netkit banner
+      is not this issue.
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2020-10188
+    match:
+      products: ["netkit"]
+      versions_exact: ["0.17"]
+      version_at_or_below: "0.17"
+
+  - id: live555-rtsp-cve-2018-4013
+    cve: CVE-2018-4013
+    severity: critical
+    title: LIVE555 RTSP server before 2018.10.17 has a header overflow
+    summary: >
+      LIVE555 RTSP server library 0.92, and dated builds before 2018.10.17,
+      has a stack overflow in header parsing (CVE-2018-4013).
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2018-4013
+    match:
+      products: ["live555"]
+      versions_exact: ["0.92"]
+      version_below: "2018.10.17"
+      range_min_major: 2000
+
+  - id: upnp-igd-callstranger-cve-2020-12695
+    cve: CVE-2020-12695
+    severity: high
+    title: Exposed UPnP IGD may be affected by CallStranger
+    summary: >
+      An InternetGatewayDevice was exposed. CVE-2020-12695 (CallStranger) is
+      a protocol issue in the UPnP specification before 2020-04-17. This match
+      is the exposed IGD, not a confirmed firmware build.
+    reference: https://nvd.nist.gov/vuln/detail/CVE-2020-12695
+    match:
+      device_types: ["InternetGatewayDevice"]

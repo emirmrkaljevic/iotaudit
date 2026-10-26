@@ -74,6 +74,9 @@ Plain-English per-device findings such as:
 ## v0.4 – Security checks
 
 - CVEs per vendor/model/firmware: banner + profile → OSV / NVD / CISA KEV (cached locally)
+  - [x] Offline known-issue hints from a small curated file shipped with the
+    package (0.1.10). No network lookup. A hint changes the grade only when
+    the version match is exact and the entry is critical.
 - [x] Default credentials: short vendor-default list, only on a user-confirmed own device,
   rate-limited, never brute force (0.1.4, `iotaudit credcheck`)
 - [x] UPnP IGD: list port forwards on your router and attribute them to devices (0.1.3, read-only)

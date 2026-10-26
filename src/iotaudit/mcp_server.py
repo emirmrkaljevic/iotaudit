@@ -23,7 +23,9 @@ def create_server():
                      report_path: str | None = None, pdf: bool = False) -> list[dict]:
         """Analyse a pcap of your own network.
 
-        Per-device destinations, plaintext vs TLS, an A-F grade, and a one-line safety verdict.
+        Per-device destinations, plaintext vs TLS, an A-F grade, a one-line safety verdict,
+        and offline known_issue_hints from banners already in the capture. A hint changes
+        the grade only when the version match is exact and the severity is critical.
         When report_path is set, write the HTML report there. pdf=true also writes a PDF
         next to that HTML (same name, .pdf suffix) and needs the iotaudit[pdf] extra.
         """

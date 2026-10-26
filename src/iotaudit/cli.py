@@ -57,8 +57,10 @@ def _finish(col, args, meta) -> int:
     out.write_text(html, encoding="utf-8")
     for d in devices:
         head = d.get("verdict") or f"grade {d['grade']}"
+        hints = d.get("known_issue_hints") or []
+        hint_note = f", {len(hints)} known-issue hint(s)" if hints else ""
         print(f"{d['ip']:<16} {head}  ({len(d['destinations'])} destinations, "
-              f"{len(d['findings'])} findings)")
+              f"{len(d['findings'])} findings{hint_note})")
     print(f"Report written to {out.resolve()}")
     print(f"JSON written to {Path(json_path).resolve()}")
     if getattr(args, "pdf", False):
