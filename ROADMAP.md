@@ -20,7 +20,7 @@ can carry a `TrafficClass` (`video`, `audio`, `audio+video`, `telemetry`, `firmw
 `unknown`) with confidence and a `while_app_idle` flag. New analysers only add findings; grading
 and reports pick them up automatically. Grading weights inferred findings by confidence (v0.2).
 
-## v0.1.0 – MVP (target: within a few days)
+## v0.1.0: MVP (target: within a few days)
 
 Done in the first commit:
 - [x] Hotspot mode (laptop becomes the access point via NetworkManager) and pcap import
@@ -28,7 +28,7 @@ Done in the first commit:
 - [x] Country (local GeoLite2 / DB-IP Lite `.mmdb`), organisation, tracker tagging
 - [x] Plaintext vs TLS detection, outdated TLS 1.0/1.1, QUIC
 - [x] nmap open-port scan with risk notes
-- [x] Device profile library (YAML), A–F grade, HTML report, JSON output
+- [x] Device profile library (YAML), A-F grade, HTML report, JSON output
 - [x] MCP server (`analyze_pcap`, `capture`, `scan_device`), consent gate, CI
 
 Remaining for v0.1.0:
@@ -39,16 +39,16 @@ Remaining for v0.1.0:
   (0.1.5 also shows video / audio / telemetry / unknown as indicators with confidence)
 - [ ] PyPI release, MCP registry listing
 
-## v0.2 – "What is it sending?" (traffic classification)
+## v0.2: "What is it sending?" (traffic classification)
 
 Plain-English per-device findings such as:
 > *Your camera sends data to `xyz.example.com` (Germany, Amazon AWS). Pattern looks like
-> **video** (sustained ~1.2 Mbit/s upload, large packets, steady timing) – confidence: medium.
+> **video** (sustained ~1.2 Mbit/s upload, large packets, steady timing), confidence: medium.
 > This also happened while the app was closed.*
 
 - Per-destination time series: bitrate up/down, packet-size distribution, inter-arrival timing
 - Heuristics: video (sustained high upload, large near-MTU packets, keyframe bursts),
-  audio (steady low bitrate ~20–130 kbit/s, small regular packets), telemetry (small periodic
+  audio (steady low bitrate ~20-130 kbit/s, small regular packets), telemetry (small periodic
   heartbeats), firmware download (large one-off downstream burst)
 - Protocol hints: RTSP/RTP, WebRTC (STUN/TURN, DTLS-SRTP), P2P relay services, MQTT
 - "Upload while app idle": user marks idle periods (CLI prompt / web UI button) or uses the
@@ -56,7 +56,7 @@ Plain-English per-device findings such as:
 - Confidence scoring, labelled test captures, documented false-positive cases
 - Grading weighted by confidence
 
-## v0.3 – Phone & web UI
+## v0.3: Phone and web UI
 
 - **Web UI** served by the laptop or a Raspberry Pi: start/stop captures, mark "app open/closed",
   view reports from a phone browser on the same network
@@ -64,14 +64,14 @@ Plain-English per-device findings such as:
   (PCAPdroid-style: `VpnService`, no root). Export pcap or stream to iotaudit; first step is
   documenting how to use PCAPdroid itself, then an optional companion app
 - **iOS (honest limits)**: no packet capture on a stock iPhone. Options:
-  - capture on the laptop/Pi hotspot (the iPhone joins it) – sees destinations, not app identity
+  - capture on the laptop/Pi hotspot (the iPhone joins it) sees destinations, not app identity
   - `rvictl` remote virtual interface from a Mac over USB (macOS + Xcode tools)
   - a local VPN app (`NEPacketTunnelProvider`) would need a paid Apple developer account and
-    App Store review – out of scope for now
+    App Store review, out of scope for now
   - TLS contents of pinned apps stay hidden; we report metadata only
 - Correlate phone-app traffic with device traffic (app open → device starts streaming)
 
-## v0.4 – Security checks
+## v0.4: Security checks
 
 - CVEs per vendor/model/firmware: banner + profile → OSV / NVD / CISA KEV (cached locally)
   - [x] Offline known-issue hints from a small curated file shipped with the
@@ -85,9 +85,13 @@ Plain-English per-device findings such as:
 - Firmware update checks: is the device phoning a firmware endpoint, version vs latest known
 - Insecure local services: telnet, ADB, unauthenticated RTSP/ONVIF, open MQTT
 
-## v0.5 – Continuous mode
+## v0.5: Continuous mode
 
 - Raspberry Pi image / OpenWrt package, scheduled reports
+- [x] One command for a full pass (0.1.11, `iotaudit auto`): discover, identify,
+  port scan, read-only UPnP, passive capture, a dated HTML, JSON, and PDF report,
+  and a compare against the previous run in that folder. Default passwords stay
+  on `iotaudit credcheck`.
 - [x] Change detection between two saved audits (0.1.9, `iotaudit diff` and
   `--compare`): new or gone destination domains and IPs, new countries, new open
   ports, grade and verdict changes, newly unencrypted traffic, and new UPnP
