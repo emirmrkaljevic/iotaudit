@@ -128,6 +128,7 @@ def build_devices(
     scans: dict[str, list] | None = None,
     peer_labels: dict[str, str] | None = None,
     upnp: dict | None = None,
+    known_devices: list[dict] | None = None,
 ) -> list[Device]:
     geo = geo or Geo()
     profiles = load_profiles(extra_profiles)
@@ -157,6 +158,21 @@ def build_devices(
     for ip, qs in col.queries.items():
         if ip in devices:
             devices[ip].dns_queries |= qs
+
+    for item in known_devices or []:
+        ip = str(item.get("ip") or "")
+        if not ip:
+            continue
+        dev = ensure(ip)
+        if item.get("mac"):
+            dev.mac = item["mac"]
+        elif not dev.mac and col.macs.get(ip):
+            dev.mac = col.macs[ip]
+        hostname = item.get("hostname")
+        if hostname and not dev.hostname:
+            dev.hostname = hostname
+        if item.get("looks_like"):
+            dev.__dict__["looks_like"] = item["looks_like"]
 
     for dest in devices.values():
         dest.vendor = mac_vendor(dest.mac)
@@ -295,6 +311,9 @@ def to_dict(dev: Device) -> dict:
         from .devicetype import type_from_report
 
         d["device_type"] = type_from_report(d)
+    looks_like = dev.__dict__.get("looks_like")
+    if looks_like:
+        d["looks_like"] = looks_like
     countries, unresolved = destination_country_summary(list(dev.destinations.values()))
     d["destination_countries"] = countries
     d["destinations_without_country"] = unresolved
