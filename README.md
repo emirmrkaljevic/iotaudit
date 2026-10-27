@@ -13,7 +13,7 @@ pip install iotaudit
 sudo iotaudit auto      # asks for consent, audits your own network, writes an HTML report
 ```
 
-![Sample iotaudit report](docs/sample-report.png)
+![iotaudit auto demo (sample data)](docs/auto-demo.svg)
 
 **Is your smart pet feeder, camera or plug safe?** `iotaudit` watches what your own IoT devices
 do on the network and gives each one an **A-F grade**, a one-line safety verdict, and a one-page HTML report. Everything
