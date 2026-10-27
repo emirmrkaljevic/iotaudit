@@ -38,7 +38,7 @@ It answers the questions you actually have about a cheap smart device:
   results and exits 1 when a new destination, country, open port, worse grade,
   unencrypted flow, UPnP forward, or device appeared.
 
-> Status: **0.1.10**. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.11**. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading with a
 > one-line safety verdict, HTML and PDF reports, a diff between two audits, offline known-issue
 > hints, a local web UI and the MCP server work. A full vulnerability feed is still on the
@@ -75,7 +75,46 @@ pipx install "git+https://github.com/emirmrkaljevic/iotaudit"
 
 Capturing needs root (`sudo`). The optional port scan needs `nmap`.
 
-## Quickstart
+## Quick start
+
+One command does the audit. It asks you to confirm this is your network, picks the active interface, finds devices, identifies them, scans ports, lists UPnP forwards (read-only), captures passively for 60 seconds, and writes the report.
+
+```bash
+sudo iotaudit auto
+```
+
+Each device is printed on one line, then the report path. Files land in `~/iotaudit/YYYY-MM-DD/` as HTML and JSON. A PDF is written next to them when `iotaudit[pdf]` is installed (`pip install "iotaudit[pdf]"`). If that folder already has a run from today, the new run is compared with the latest one.
+
+Skip the typed confirmation with the existing ownership flag:
+
+```bash
+sudo iotaudit auto --i-own-this-network
+```
+
+A longer capture, or an explicit folder:
+
+```bash
+sudo iotaudit auto --i-own-this-network --duration 120 --out-dir ~/iotaudit
+```
+
+`nmap` and `tcpdump` are required. If either is missing, the command prints one install line and stops:
+
+```bash
+# macOS
+brew install nmap tcpdump
+# Debian or Ubuntu
+sudo apt install nmap tcpdump
+```
+
+On macOS, Homebrew and a pipx install often sit outside sudo's PATH:
+
+```bash
+sudo env PATH="$PATH" "$(which iotaudit)" auto --i-own-this-network
+```
+
+Default passwords are not tested. That check stays opt-in, one device at a time (`iotaudit credcheck`, which is the only command with `--yes`).
+
+`auto` does not ARP-spoof and does not start a hotspot. It records traffic that already passes this computer. To pull one device's traffic through this machine, use `capture --mode arp` below.
 
 ### macOS
 

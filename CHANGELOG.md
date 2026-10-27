@@ -3,6 +3,32 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.11] - 2026-10-27
+
+### Added
+- **`iotaudit auto`.** One command for a network you own. It asks for the
+  ownership phrase (or accepts the existing `--i-own-this-network` flag),
+  picks the interface that has the default route, discovers devices, identifies
+  them, scans ports with nmap, lists UPnP forwards (read-only), and captures
+  passively for 60 seconds with a progress line. It writes HTML and JSON in
+  `~/iotaudit/YYYY-MM-DD/`, plus a PDF when `iotaudit[pdf]` is installed.
+  If that folder already has a JSON audit, the new run is compared with the
+  latest one and the exit code matches `iotaudit diff`. Each device is printed
+  on one line, then the report path.
+- Missing `nmap` or `tcpdump` stops the command with the install line for this
+  computer: `brew install ...` on macOS, `sudo apt install ...` on Debian and
+  Ubuntu, and `dnf`, `pacman`, or `zypper` when that is the package manager.
+
+### Notes
+- `--yes` stays only on `iotaudit credcheck`. `auto` does not add another way
+  to skip a confirmation, and it does not try default passwords.
+- Passive capture does not ARP-spoof and does not start a hotspot. On a normal
+  Wi-Fi network, traffic between two other devices may never reach this
+  computer. Use `iotaudit capture --mode arp` when you need that.
+- The first run in a dated folder has nothing to compare. A later run the same
+  day compares with the latest JSON already in that folder, not with yesterday.
+- The gateway is included in discovery and in the port scan. This computer is not.
+
 ## [0.1.10] - 2026-10-26
 
 ### Added
@@ -143,7 +169,7 @@ All notable changes to iotaudit are documented here. This project follows
 ## [0.1.0] - 2026-10-17
 
 First tagged release. iotaudit audits **your own** smart-home devices: it watches what each one
-does on the network and gives it an A–F grade with a one-page HTML report.
+does on the network and gives it an A-F grade with a one-page HTML report.
 
 ### Added
 - **Capture modes**: hotspot (Linux/NetworkManager), ARP mode (macOS + Linux, spoofs one owned
