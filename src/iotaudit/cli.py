@@ -138,6 +138,12 @@ def cmd_report(args) -> int:
     return 0
 
 
+def cmd_auto(args) -> int:
+    from .auto import run_auto
+
+    return run_auto(args)
+
+
 def cmd_capture(args) -> int:
     if not require_consent(args.i_own_this_network):
         print("Consent not given; aborting.", file=sys.stderr)
@@ -365,6 +371,26 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="iotaudit", description="Audit your own smart-home devices.")
     p.add_argument("--version", action="version", version=__version__)
     sub = p.add_subparsers(dest="cmd", required=True)
+
+    auto = sub.add_parser(
+        "auto",
+        help="find devices, run the safe checks, capture, and write the report",
+        description=(
+            "Confirm you own this network, pick the active interface, discover devices, "
+            "identify them, scan ports, list UPnP forwards (read-only), capture passively, "
+            "and write HTML, JSON, and a PDF when that extra is installed. "
+            "Does not try default passwords (use iotaudit credcheck for that)."
+        ),
+    )
+    auto.add_argument("--i-own-this-network", action="store_true",
+                      help="confirm you own this network (skips the typed phrase)")
+    auto.add_argument("--iface", default="auto",
+                      help="capture interface (default: the one with the default route)")
+    auto.add_argument("--duration", type=int, default=60,
+                      help="passive capture length in seconds (default: 60, max 3600)")
+    auto.add_argument("--out-dir",
+                      help="folder for dated reports (default: ~/iotaudit)")
+    auto.set_defaults(func=cmd_auto)
 
     def common(sp):
         sp.add_argument("--device", action="append", help="device IP to focus on (repeatable)")
