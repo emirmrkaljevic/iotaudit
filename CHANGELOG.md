@@ -3,6 +3,16 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.12] - 2026-10-30
+
+### Added
+- **Home Assistant summary.** `iotaudit auto --ha-json PATH` and
+  `iotaudit export AUDIT.json [--compare PREV.json] [--out PATH]` write a
+  compact JSON file: per device name, IP, grade, finding count, and whether it
+  changed since the previous audit, plus totals and the worst grade. A
+  `command_line` sensor can read it. Example YAML in the docs:
+  https://emirmrkaljevic.github.io/iotaudit/home-assistant.html
+
 ## [0.1.11] - 2026-10-27
 
 ### Added

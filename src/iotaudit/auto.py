@@ -512,8 +512,10 @@ def run_auto(
     if _write_pdf(html, pdf_path):
         print(f"PDF written to {pdf_path.resolve()}")
 
+    ha_path = getattr(args, "ha_json", None)
     if previous_path is None:
         print("No earlier audit in this folder. Nothing to compare.", file=sys.stderr)
+        _write_ha(ha_path, devices, None, when)
         return 0
     try:
         previous = load_audit(previous_path)
@@ -528,4 +530,18 @@ def run_auto(
     )
     print()
     print(format_diff(result), end="")
+    _write_ha(ha_path, devices, result, when)
     return 1 if result["security_relevant"] else 0
+
+
+def _write_ha(path, devices: list[dict], diff: dict | None, when: datetime) -> None:
+    if not path:
+        return
+    from .ha import ha_summary, write_ha_summary
+
+    try:
+        dest = write_ha_summary(path, ha_summary(devices, diff, now=when))
+    except OSError as exc:
+        print(f"Home Assistant summary skipped: {exc}", file=sys.stderr)
+        return
+    print(f"Home Assistant summary written to {dest.resolve()}")

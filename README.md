@@ -45,7 +45,7 @@ It answers the questions you actually have about a cheap smart device:
   results and exits 1 when a new destination, country, open port, worse grade,
   unencrypted flow, UPnP forward, or device appeared.
 
-> Status: **0.1.11**. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.12**. Home Assistant summary via `--ha-json` and `iotaudit export`. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading with a
 > one-line safety verdict, HTML and PDF reports, a diff between two audits, offline known-issue
 > hints, a local web UI and the MCP server work. A full vulnerability feed is still on the
@@ -334,6 +334,18 @@ View reports, upload a pcap (including **PCAPdroid** captures from Android) and 
 scan & capture from the browser. Localhost by default; `--lan` is opt-in, token-protected and only
 answers private-range clients. iPhones can use the web UI but cannot capture on their own; see
 [docs/phones.md](docs/phones.md) for what works on Android and iOS and what does not.
+
+## Home Assistant
+
+Write a small JSON summary that a Home Assistant sensor can read:
+
+```bash
+sudo iotaudit auto --ha-json /path/to/homeassistant/config/iotaudit.json
+iotaudit export ~/iotaudit/2026-01-01/120000.json --compare earlier.json --out iotaudit.json
+```
+
+Each device gets `name`, `ip`, `grade`, `findings`, and `changed` (null on the first run).
+Ready-to-paste sensor YAML: [Home Assistant guide](https://emirmrkaljevic.github.io/iotaudit/home-assistant.html).
 
 ## MCP server
 

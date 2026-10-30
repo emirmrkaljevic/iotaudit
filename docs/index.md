@@ -11,6 +11,10 @@ Short pages on typical network behaviour of common consumer IoT devices, based o
 - [What does a Wi-Fi pet feeder send?](devices/wifi-pet-feeder.html)
 - [What does a Xiaomi Mi Home device send?](devices/xiaomi-mi-home.html)
 
+## Home Assistant
+
+- [Show iotaudit results in Home Assistant](home-assistant.html)
+
 ## Get iotaudit
 
 `pip install iotaudit`, then `sudo iotaudit auto`. See the [README](https://github.com/emirmrkaljevic/iotaudit#readme) and [PyPI](https://pypi.org/project/iotaudit/).

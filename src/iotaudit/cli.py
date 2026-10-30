@@ -138,6 +138,29 @@ def cmd_report(args) -> int:
     return 0
 
 
+def cmd_export(args) -> int:
+    import json
+
+    from .diff import diff_audits, load_audit
+    from .ha import ha_summary, write_ha_summary
+
+    try:
+        new = load_audit(args.audit)
+        diff = None
+        if args.compare:
+            diff = diff_audits(load_audit(args.compare), new)
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    summary = ha_summary(new.devices, diff)
+    if args.out:
+        dest = write_ha_summary(args.out, summary)
+        print(f"Home Assistant summary written to {dest.resolve()}")
+    else:
+        print(json.dumps(summary, indent=2))
+    return 0
+
+
 def cmd_auto(args) -> int:
     from .auto import run_auto
 
@@ -390,6 +413,8 @@ def build_parser() -> argparse.ArgumentParser:
                       help="passive capture length in seconds (default: 60, max 3600)")
     auto.add_argument("--out-dir",
                       help="folder for dated reports (default: ~/iotaudit)")
+    auto.add_argument("--ha-json", metavar="PATH",
+                      help="also write a compact summary for a Home Assistant sensor")
     auto.set_defaults(func=cmd_auto)
 
     def common(sp):
@@ -439,6 +464,15 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("new", help="later JSON results")
     d.add_argument("--json", action="store_true", help="print machine-readable JSON")
     d.set_defaults(func=cmd_diff)
+
+    e = sub.add_parser("export", help="write a compact summary of a saved JSON audit")
+    e.add_argument("audit", metavar="AUDIT.json")
+    e.add_argument("--format", choices=["ha"], default="ha",
+                   help="ha: per-device grade, finding count, and change flag for Home Assistant")
+    e.add_argument("--compare", metavar="PREV.json",
+                   help="earlier audit; fills in the changed flag")
+    e.add_argument("--out", help="output file (default: print to stdout)")
+    e.set_defaults(func=cmd_export)
 
     r = sub.add_parser("report", help="write a PDF from a saved JSON or HTML report")
     r.add_argument("input", help="saved device JSON, or an HTML report")

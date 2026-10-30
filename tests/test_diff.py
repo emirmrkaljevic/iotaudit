@@ -442,7 +442,7 @@ def test_readme_and_changelog_document_diff():
     readme = (root / "README.md").read_text(encoding="utf-8")
     changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "iotaudit diff" in readme and "--compare" in readme and "cron" in readme.lower()
-    assert "0.1.11" in readme
+    assert "0.1.12" in readme
     quick = readme[readme.index("## Quick start"):readme.index("### macOS")]
     first_command = quick.split("```bash", 1)[1].split("```", 1)[0]
     assert first_command.strip() == "sudo iotaudit auto"
@@ -452,9 +452,9 @@ def test_readme_and_changelog_document_diff():
     version = (root / "src/iotaudit/__init__.py").read_text(encoding="utf-8")
     project = (root / "pyproject.toml").read_text(encoding="utf-8")
     server = (root / "server.json").read_text(encoding="utf-8")
-    assert '__version__ = "0.1.11"' in version
-    assert 'version = "0.1.11"' in project
-    assert server.count('"version": "0.1.11"') == 2
+    assert '__version__ = "0.1.12"' in version
+    assert 'version = "0.1.12"' in project
+    assert server.count('"version": "0.1.12"') == 2
     roadmap = (root / "ROADMAP.md").read_text(encoding="utf-8")
     auto_src = (root / "src/iotaudit/auto.py").read_text(encoding="utf-8")
     for dash in _DASHES:
