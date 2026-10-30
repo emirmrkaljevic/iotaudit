@@ -43,6 +43,7 @@ Example with documentation addresses:
 
 `changed` is `null` on the first run, when there is nothing to compare with.
 
+{% raw %}
 ## 3. Sensor YAML
 
 Add this to `configuration.yaml` and restart Home Assistant:
@@ -101,6 +102,8 @@ automation:
             iotaudit: {{ state_attr('sensor.iotaudit_worst_grade', 'changed') }}
             device(s) changed, worst grade {{ states('sensor.iotaudit_worst_grade') }}.
 ```
+
+{% endraw %}
 
 To run audits on a schedule, use cron on the audit machine, for example once a night.
 
