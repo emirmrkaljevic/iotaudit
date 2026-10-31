@@ -8,6 +8,9 @@ Short pages on typical network behaviour of common consumer IoT devices, based o
 - [What does an IP camera (Hikvision, Dahua, Amcrest) send?](devices/ip-camera.html)
 - [What is iotbing.com and why is my camera or feeder talking to it?](devices/pet-camera-iotbing.html)
 - [What does a Tuya smart plug send?](devices/tuya-smart-plug.html)
+- [What does a Philips Hue bridge send?](devices/philips-hue-bridge.html)
+- [What does a Chromecast or Google Cast device send?](devices/chromecast.html)
+- [What does a Shelly or Sonoff smart switch send?](devices/shelly-sonoff.html)
 - [What does a Wi-Fi pet feeder send?](devices/wifi-pet-feeder.html)
 - [What does a Xiaomi Mi Home device send?](devices/xiaomi-mi-home.html)
 
