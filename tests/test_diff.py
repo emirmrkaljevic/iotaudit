@@ -453,9 +453,10 @@ def test_readme_and_changelog_document_diff():
     version = (root / "src/iotaudit/__init__.py").read_text(encoding="utf-8")
     project = (root / "pyproject.toml").read_text(encoding="utf-8")
     server = (root / "server.json").read_text(encoding="utf-8")
-    assert '__version__ = "0.1.12"' in version
-    assert 'version = "0.1.12"' in project
-    assert server.count('"version": "0.1.12"') == 2
+    assert f'__version__ = "{__version__}"' in version
+    assert f'version = "{__version__}"' in project
+    assert server.count(f'"version": "{__version__}"') == 2
+    assert f"## [{__version__}]" in changelog
     roadmap = (root / "ROADMAP.md").read_text(encoding="utf-8")
     auto_src = (root / "src/iotaudit/auto.py").read_text(encoding="utf-8")
     for dash in _DASHES:
