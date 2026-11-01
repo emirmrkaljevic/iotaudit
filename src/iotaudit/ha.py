@@ -7,6 +7,8 @@ Everything stays on disk; nothing is sent anywhere.
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 from datetime import datetime
 from pathlib import Path
@@ -77,3 +79,19 @@ def write_ha_summary(path: str | Path, summary: dict) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     return dest
+
+
+CSV_FIELDS = ["name", "ip", "grade", "findings", "changed", "status"]
+
+
+def summary_csv(summary: dict) -> str:
+    """One row per device, for spreadsheets. ``changed`` is empty on a first run."""
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=CSV_FIELDS, lineterminator="\n")
+    writer.writeheader()
+    for row in summary.get("device_list") or []:
+        out = {k: row.get(k) for k in CSV_FIELDS}
+        if out["changed"] is not None:
+            out["changed"] = "yes" if out["changed"] else "no"
+        writer.writerow(out)
+    return buf.getvalue()

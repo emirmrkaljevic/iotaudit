@@ -45,7 +45,7 @@ It answers the questions you actually have about a cheap smart device:
   results and exits 1 when a new destination, country, open port, worse grade,
   unencrypted flow, UPnP forward, or device appeared.
 
-> Status: **0.1.12**. Home Assistant summary via `--ha-json` and `iotaudit export`. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.13**. CSV export via `iotaudit export --format csv`; Home Assistant summary via `--ha-json`. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading with a
 > one-line safety verdict, HTML and PDF reports, a diff between two audits, offline known-issue
 > hints, a local web UI and the MCP server work. A full vulnerability feed is still on the
@@ -346,6 +346,12 @@ iotaudit export ~/iotaudit/2026-01-01/120000.json --compare earlier.json --out i
 
 Each device gets `name`, `ip`, `grade`, `findings`, and `changed` (null on the first run).
 Ready-to-paste sensor YAML: [Home Assistant guide](https://emirmrkaljevic.github.io/iotaudit/home-assistant.html).
+
+For a spreadsheet, the same summary as CSV (one row per device):
+
+```bash
+iotaudit export audit.json --compare earlier.json --format csv --out devices.csv
+```
 
 ## MCP server
 

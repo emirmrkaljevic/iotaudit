@@ -442,7 +442,8 @@ def test_readme_and_changelog_document_diff():
     readme = (root / "README.md").read_text(encoding="utf-8")
     changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "iotaudit diff" in readme and "--compare" in readme and "cron" in readme.lower()
-    assert "0.1.12" in readme
+    from iotaudit import __version__
+    assert __version__ in readme
     quick = readme[readme.index("## Quick start"):readme.index("### macOS")]
     first_command = quick.split("```bash", 1)[1].split("```", 1)[0]
     assert first_command.strip() == "sudo iotaudit auto"

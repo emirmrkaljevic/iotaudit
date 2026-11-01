@@ -56,3 +56,19 @@ def test_export_cli_stdout(capsys):
 
 def test_export_cli_bad_file(tmp_path, capsys):
     assert main(["export", str(tmp_path / "missing.json")]) == 1
+
+
+def test_export_csv(tmp_path, capsys):
+    import csv
+    old = FIX / "diff_old.json"
+    new = FIX / "diff_new.json"
+    assert main(["export", str(new), "--compare", str(old), "--format", "csv"]) == 0
+    rows = list(csv.DictReader(capsys.readouterr().out.splitlines()))
+    assert len(rows) == len(load_audit(new).devices)
+    assert set(rows[0]) == {"name", "ip", "grade", "findings", "changed", "status"}
+    assert {r["changed"] for r in rows} <= {"yes", "no"}
+    dest = tmp_path / "out" / "s.csv"
+    assert main(["export", str(new), "--format", "csv", "--out", str(dest)]) == 0
+    lines = dest.read_text().splitlines()
+    assert lines[0] == "name,ip,grade,findings,changed,status"
+    assert all(line.endswith(",first_run") for line in lines[1:])

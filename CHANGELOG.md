@@ -3,6 +3,13 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.13] - 2026-11-01
+
+### Added
+- **CSV export.** `iotaudit export AUDIT.json --format csv [--compare PREV.json]
+  [--out PATH]` writes one row per device (name, IP, grade, finding count,
+  changed, status) for a spreadsheet.
+
 ## [0.1.12] - 2026-10-30
 
 ### Added
