@@ -13,7 +13,13 @@
 ```bash
 pip install iotaudit
 sudo iotaudit auto      # asks for consent, audits your own network, writes an HTML report
+iotaudit analyze capture.pcap   # no root needed: analyse a pcap or PCAPdroid capture you already have
 ```
+
+**Quick links:** [sample report](https://emirmrkaljevic.github.io/iotaudit/sample-report.html) ·
+[what common devices send](https://emirmrkaljevic.github.io/iotaudit/) ·
+[Home Assistant](https://emirmrkaljevic.github.io/iotaudit/home-assistant.html) ·
+[MCP server](#mcp-server)
 
 ![iotaudit auto demo (sample data)](docs/auto-demo.svg)
 
