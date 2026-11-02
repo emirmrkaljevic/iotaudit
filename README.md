@@ -51,7 +51,7 @@ It answers the questions you actually have about a cheap smart device:
   results and exits 1 when a new destination, country, open port, worse grade,
   unencrypted flow, UPnP forward, or device appeared.
 
-> Status: **0.1.13**. CSV export via `iotaudit export --format csv`; Home Assistant summary via `--ha-json`. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.14**. CSV export via `iotaudit export --format csv`; Home Assistant summary via `--ha-json`. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading with a
 > one-line safety verdict, HTML and PDF reports, a diff between two audits, offline known-issue
 > hints, a local web UI and the MCP server work. A full vulnerability feed is still on the

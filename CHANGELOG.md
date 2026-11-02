@@ -3,6 +3,12 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.14] - 2026-11-02
+
+### Fixed
+- `iotaudit analyze` on a missing or unreadable file now prints a one-line
+  error and exits 1 instead of a Python traceback.
+
 ## [0.1.13] - 2026-11-01
 
 ### Added

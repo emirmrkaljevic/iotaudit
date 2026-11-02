@@ -362,7 +362,14 @@ def cmd_upnp(args) -> int:
 
 
 def cmd_analyze(args) -> int:
-    col = from_pcap(args.pcap, Collector(args.device))
+    from scapy.error import Scapy_Exception
+
+    try:
+        col = from_pcap(args.pcap, Collector(args.device))
+    except (OSError, Scapy_Exception) as exc:
+        reason = exc.strerror if isinstance(exc, OSError) and exc.strerror else str(exc)
+        print(f"error: cannot read {args.pcap}: {reason}", file=sys.stderr)
+        return 1
     return _finish(col, args, {"source": args.pcap})
 
 

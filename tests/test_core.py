@@ -482,3 +482,15 @@ def test_stun_not_claimed_as_video_and_broadcast_split():
     cgnat = next(x for x in d["destinations"] if x["ip"].startswith("100."))
     assert cgnat["encryption_kind"] == "stun"
     assert d["idle_upload"]
+
+
+def test_analyze_bad_input_is_a_clean_error(tmp_path, capsys):
+    from iotaudit.cli import main
+
+    assert main(["analyze", str(tmp_path / "missing.pcap")]) == 1
+    assert "cannot read" in capsys.readouterr().err
+    bad = tmp_path / "bad.pcap"
+    bad.write_text("not a capture")
+    assert main(["analyze", str(bad)]) == 1
+    err = capsys.readouterr().err
+    assert "cannot read" in err and "Traceback" not in err
