@@ -142,7 +142,7 @@ def cmd_export(args) -> int:
     import json
 
     from .diff import diff_audits, load_audit
-    from .ha import ha_summary, summary_csv, write_ha_summary
+    from .ha import ha_summary, summary_csv, summary_markdown, write_ha_summary
 
     try:
         new = load_audit(args.audit)
@@ -153,15 +153,15 @@ def cmd_export(args) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     summary = ha_summary(new.devices, diff)
-    if args.format == "csv":
-        text = summary_csv(summary)
+    if args.format in ("csv", "md"):
+        text = summary_csv(summary) if args.format == "csv" else summary_markdown(summary)
         if args.out:
             from pathlib import Path
 
             dest = Path(args.out).expanduser()
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(text, encoding="utf-8")
-            print(f"CSV summary written to {dest.resolve()}")
+            print(f"{args.format.upper()} summary written to {dest.resolve()}")
         else:
             sys.stdout.write(text)
         return 0
@@ -486,8 +486,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     e = sub.add_parser("export", help="write a compact summary of a saved JSON audit")
     e.add_argument("audit", metavar="AUDIT.json")
-    e.add_argument("--format", choices=["ha", "csv"], default="ha",
-                   help="ha: JSON for Home Assistant; csv: one row per device for spreadsheets")
+    e.add_argument("--format", choices=["ha", "csv", "md"], default="ha",
+                   help="ha: JSON for Home Assistant; csv: one row per device for spreadsheets; "
+                        "md: Markdown table to paste into an issue or forum post")
     e.add_argument("--compare", metavar="PREV.json",
                    help="earlier audit; fills in the changed flag")
     e.add_argument("--out", help="output file (default: print to stdout)")

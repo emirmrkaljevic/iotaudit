@@ -95,3 +95,25 @@ def summary_csv(summary: dict) -> str:
             out["changed"] = "yes" if out["changed"] else "no"
         writer.writerow(out)
     return buf.getvalue()
+
+
+def summary_markdown(summary: dict) -> str:
+    """Markdown table, handy to paste into an issue or forum post."""
+    def cell(value) -> str:
+        if value is None:
+            return ""
+        if value is True or value is False:
+            return "yes" if value else "no"
+        return str(value).replace("|", "\\|").replace("\n", " ")
+
+    lines = [
+        f"iotaudit summary: {summary.get('devices', 0)} devices, "
+        f"worst grade {summary.get('worst_grade') or 'n/a'}, "
+        f"{summary.get('findings', 0)} finding{'' if summary.get('findings') == 1 else 's'}",
+        "",
+        "| " + " | ".join(CSV_FIELDS) + " |",
+        "|" + "---|" * len(CSV_FIELDS),
+    ]
+    for row in summary.get("device_list") or []:
+        lines.append("| " + " | ".join(cell(row.get(k)) for k in CSV_FIELDS) + " |")
+    return "\n".join(lines) + "\n"

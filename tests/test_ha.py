@@ -72,3 +72,20 @@ def test_export_csv(tmp_path, capsys):
     lines = dest.read_text().splitlines()
     assert lines[0] == "name,ip,grade,findings,changed,status"
     assert all(line.endswith(",first_run") for line in lines[1:])
+
+
+def test_export_markdown(capsys):
+    new = FIX / "diff_new.json"
+    assert main(["export", str(new), "--format", "md"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[0].startswith("iotaudit summary: ")
+    assert out[2] == "| name | ip | grade | findings | changed | status |"
+    rows = [line for line in out[4:] if line.startswith("| ")]
+    assert len(rows) == len(load_audit(new).devices)
+    assert all(line.endswith("| first_run |") for line in rows)
+
+
+def test_markdown_escapes_pipes():
+    from iotaudit.ha import summary_markdown
+    text = summary_markdown({"device_list": [{"name": "a|b", "changed": True}]})
+    assert "a\\|b" in text and "| yes |" in text

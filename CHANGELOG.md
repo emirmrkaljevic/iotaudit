@@ -3,6 +3,12 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.15] - 2026-11-03
+
+### Added
+- `iotaudit export AUDIT.json --format md` prints the per-device summary as a
+  Markdown table, ready to paste into an issue or forum post.
+
 ## [0.1.14] - 2026-11-02
 
 ### Fixed
