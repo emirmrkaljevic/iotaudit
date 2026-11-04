@@ -19,7 +19,7 @@ iotaudit summary: 3 devices, worst grade D, 1 finding
 |---|---|---|---|---|---|
 | Example Vendor |  | D | 1 |  | first_run |
 | Example Vendor |  | C | 0 |  | first_run |
-| device 3 |  | C | 0 |  | first_run |
+| Example Vendor |  | C | 0 |  | first_run |
 ```
 
 - `--format md` gives a Markdown table for GitHub issues, Reddit or the Home Assistant forum.
