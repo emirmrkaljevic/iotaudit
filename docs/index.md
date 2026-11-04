@@ -17,6 +17,7 @@ Short pages on typical network behaviour of common consumer IoT devices, based o
 ## Home Assistant
 
 - [Show iotaudit results in Home Assistant](home-assistant.html)
+- [Share your results without leaking your network](share-results.html)
 
 ## Get iotaudit
 
