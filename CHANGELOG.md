@@ -3,6 +3,13 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.16] - 2026-11-04
+
+### Added
+- `iotaudit export --redact` leaves IP addresses out of the summary (JSON, CSV
+  or Markdown), so it is safe to post in an issue or forum. Devices named only
+  by their IP become "device 1", "device 2", and so on.
+
 ## [0.1.15] - 2026-11-03
 
 ### Added

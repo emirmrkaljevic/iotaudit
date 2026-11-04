@@ -142,7 +142,7 @@ def cmd_export(args) -> int:
     import json
 
     from .diff import diff_audits, load_audit
-    from .ha import ha_summary, summary_csv, summary_markdown, write_ha_summary
+    from .ha import ha_summary, redact_summary, summary_csv, summary_markdown, write_ha_summary
 
     try:
         new = load_audit(args.audit)
@@ -153,6 +153,8 @@ def cmd_export(args) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     summary = ha_summary(new.devices, diff)
+    if args.redact:
+        summary = redact_summary(summary)
     if args.format in ("csv", "md"):
         text = summary_csv(summary) if args.format == "csv" else summary_markdown(summary)
         if args.out:
@@ -492,6 +494,8 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--compare", metavar="PREV.json",
                    help="earlier audit; fills in the changed flag")
     e.add_argument("--out", help="output file (default: print to stdout)")
+    e.add_argument("--redact", action="store_true",
+                   help="leave out IP addresses, for posting the summary publicly")
     e.set_defaults(func=cmd_export)
 
     r = sub.add_parser("report", help="write a PDF from a saved JSON or HTML report")

@@ -89,3 +89,22 @@ def test_markdown_escapes_pipes():
     from iotaudit.ha import summary_markdown
     text = summary_markdown({"device_list": [{"name": "a|b", "changed": True}]})
     assert "a\\|b" in text and "| yes |" in text
+
+
+def test_export_redact_drops_ips(capsys):
+    new = FIX / "diff_new.json"
+    assert main(["export", str(new), "--format", "md", "--redact"]) == 0
+    out = capsys.readouterr().out
+    for d in load_audit(new).devices:
+        if d.get("ip"):
+            assert d["ip"] not in out
+    assert main(["export", str(new), "--redact"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["redacted"] is True
+    assert all(row["ip"] is None for row in data["device_list"])
+
+
+def test_redact_renames_ip_only_names():
+    from iotaudit.ha import redact_summary
+    out = redact_summary({"device_list": [{"name": "192.168.1.9", "ip": "192.168.1.9"}]})
+    assert out["device_list"][0] == {"name": "device 1", "ip": None}

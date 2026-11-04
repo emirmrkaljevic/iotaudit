@@ -117,3 +117,17 @@ def summary_markdown(summary: dict) -> str:
     for row in summary.get("device_list") or []:
         lines.append("| " + " | ".join(cell(row.get(k)) for k in CSV_FIELDS) + " |")
     return "\n".join(lines) + "\n"
+
+
+def redact_summary(summary: dict) -> dict:
+    """Copy of the summary without IP addresses, safe to post publicly."""
+    out = dict(summary)
+    out["device_list"] = []
+    for n, row in enumerate(summary.get("device_list") or [], 1):
+        row = dict(row)
+        if row.get("name") == row.get("ip"):
+            row["name"] = f"device {n}"
+        row["ip"] = None
+        out["device_list"].append(row)
+    out["redacted"] = True
+    return out
