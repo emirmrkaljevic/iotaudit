@@ -369,6 +369,8 @@ iotaudit-mcp        # exposes audit tools to a local assistant ("audit my pet fe
 
 `diff_results` compares two saved JSON audits the same way `iotaudit diff` does.
 
+I also list the server on [mcpservers.org](https://mcpservers.org/servers/emirmrkaljevic/iotaudit) and the official MCP Registry.
+
 ## Consent & scope
 
 iotaudit only audits **your own** network. It refuses non-private targets and requires
