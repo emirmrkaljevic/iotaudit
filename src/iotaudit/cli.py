@@ -138,6 +138,28 @@ def cmd_report(args) -> int:
     return 0
 
 
+def cmd_redact(args) -> int:
+    from .redact import redact_audit
+
+    src = Path(args.audit)
+    try:
+        data = json.loads(src.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"error: cannot read {src.name}: {exc}", file=sys.stderr)
+        return 1
+    if not isinstance(data, (list, dict)):
+        print("error: not an iotaudit JSON audit", file=sys.stderr)
+        return 1
+    dest = Path(args.out) if args.out else src.with_name(src.stem + ".redacted.json")
+    if dest.resolve() == src.resolve():
+        print("error: output path is the same as the input.", file=sys.stderr)
+        return 2
+    dest.write_text(json.dumps(redact_audit(data), indent=2) + "\n", encoding="utf-8")
+    print(f"Redacted copy written to {dest.resolve()}")
+    print("Make a shareable report from it: iotaudit report --pdf " + dest.name)
+    return 0
+
+
 def cmd_export(args) -> int:
     import json
 
@@ -497,6 +519,11 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--redact", action="store_true",
                    help="leave out IP addresses, for posting the summary publicly")
     e.set_defaults(func=cmd_export)
+
+    rd = sub.add_parser("redact", help="copy a saved JSON audit without local IPs, MACs and hostnames")
+    rd.add_argument("audit", metavar="AUDIT.json")
+    rd.add_argument("--out", help="output path (default: AUDIT.redacted.json next to the input)")
+    rd.set_defaults(func=cmd_redact)
 
     r = sub.add_parser("report", help="write a PDF from a saved JSON or HTML report")
     r.add_argument("input", help="saved device JSON, or an HTML report")

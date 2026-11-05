@@ -3,6 +3,14 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.17] - 2026-11-05
+
+### Added
+- `iotaudit redact AUDIT.json [--out PATH]` writes a copy of a saved audit with
+  private and link-local IPs, MAC addresses, local hostnames and capture source
+  details replaced by stable labels (`lan-1`, `host-1`, `02:00:00:00:00:01`).
+  Public cloud destinations stay. Use it before sharing a full report.
+
 ## [0.1.16] - 2026-11-04
 
 ### Added

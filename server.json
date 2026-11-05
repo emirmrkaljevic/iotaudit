@@ -6,12 +6,12 @@
     "url": "https://github.com/emirmrkaljevic/iotaudit",
     "source": "github"
   },
-  "version": "0.1.16",
+  "version": "0.1.17",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "iotaudit",
-      "version": "0.1.16",
+      "version": "0.1.17",
       "transport": {
         "type": "stdio"
       },
