@@ -51,7 +51,7 @@ It answers the questions you actually have about a cheap smart device:
   results and exits 1 when a new destination, country, open port, worse grade,
   unencrypted flow, UPnP forward, or device appeared.
 
-> Status: **0.1.17**. CSV export via `iotaudit export --format csv`; Home Assistant summary via `--ha-json`. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.18**. CSV export via `iotaudit export --format csv`; Home Assistant summary via `--ha-json`. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading with a
 > one-line safety verdict, HTML and PDF reports, a diff between two audits, offline known-issue
 > hints, a local web UI and the MCP server work. A full vulnerability feed is still on the
@@ -359,7 +359,7 @@ For a spreadsheet, the same summary as CSV (one row per device):
 iotaudit export audit.json --compare earlier.json --format csv --out devices.csv
 ```
 
-Or as a Markdown table to paste into an issue or forum post: `iotaudit export audit.json --format md`. Add `--redact` to leave out IP addresses before you post it. To share a full report, make a redacted copy first: `iotaudit redact audit.json` writes `audit.redacted.json` with local IPs, MACs and hostnames replaced by labels like `lan-1`, then `iotaudit report --pdf audit.redacted.json`.
+Or as a Markdown table to paste into an issue or forum post: `iotaudit export audit.json --format md`. Add `--redact` to leave out IP addresses before you post it. To share a full report in one step: `iotaudit report audit.json --redact` writes `audit.redacted.html` with local IPs, MACs and hostnames replaced by labels like `lan-1`. Add `--pdf` for a PDF (needs `pip install "iotaudit[pdf]"`). Or keep the JSON copy with `iotaudit redact audit.json`.
 
 ## MCP server
 

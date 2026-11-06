@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import json
 
 from iotaudit.cli import main
@@ -58,3 +60,24 @@ def test_redact_cli(tmp_path, capsys):
     bad = tmp_path / "bad.json"
     bad.write_text("nope")
     assert main(["redact", str(bad)]) == 1
+
+
+def test_report_redact_writes_html(tmp_path, capsys):
+    fix = Path(__file__).parent / "fixtures" / "feeder_capture.json"
+    src = tmp_path / "audit.json"
+    src.write_text(fix.read_text(encoding="utf-8"), encoding="utf-8")
+    assert main(["report", "--redact", str(src)]) == 0
+    dest = tmp_path / "audit.redacted.html"
+    out = capsys.readouterr().out
+    assert "Redacted HTML report" in out
+    html = dest.read_text(encoding="utf-8")
+    assert "192.168." not in html
+    assert "lan-" in html
+    assert "iotaudit" in html.lower()
+
+
+def test_report_redact_rejects_html_input(tmp_path, capsys):
+    html = tmp_path / "report.html"
+    html.write_text("<html><body>ok</body></html>", encoding="utf-8")
+    assert main(["report", "--redact", str(html)]) == 1
+    assert "JSON audit" in capsys.readouterr().err

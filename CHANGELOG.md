@@ -3,6 +3,13 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.18] - 2026-11-06
+
+### Added
+- `iotaudit report AUDIT.json --redact` writes a shareable HTML report with local
+  IPs, MACs and hostnames replaced (same labels as `iotaudit redact`). Combine with
+  `--pdf` for a redacted PDF. HTML inputs still cannot be redacted in place.
+
 ## [0.1.17] - 2026-11-05
 
 ### Added

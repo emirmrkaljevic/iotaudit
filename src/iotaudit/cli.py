@@ -91,14 +91,20 @@ def _emit_pdf(html: str, pdf_path: Path) -> bool:
     return True
 
 
-def _html_for_report_input(path: Path) -> str:
+def _html_for_report_input(path: Path, *, redact: bool = False) -> str:
     raw = path.read_text(encoding="utf-8")
     if path.suffix.lower() in {".html", ".htm"} or raw.lstrip().startswith("<"):
+        if redact:
+            raise ValueError("pass a JSON audit with --redact; HTML reports cannot be redacted in place")
         return raw
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise ValueError(f"not a JSON or HTML report: {path.name}") from exc
+    if redact:
+        from .redact import redact_audit
+
+        data = redact_audit(data)
     meta: dict = {}
     if isinstance(data, dict) and isinstance(data.get("devices"), list):
         devices = data["devices"]
@@ -119,22 +125,30 @@ def cmd_report(args) -> int:
     if not src.is_file():
         print(f"error: not a file: {src}", file=sys.stderr)
         return 2
-    if not args.pdf:
-        print("Pass --pdf to write a PDF. Example: iotaudit report --pdf report.html",
+    if not args.pdf and not args.redact:
+        print("Pass --pdf to write a PDF, or --redact to write a shareable HTML report. "
+              "Example: iotaudit report --redact AUDIT.json",
               file=sys.stderr)
         return 2
-    dest = Path(args.out) if args.out else src.with_suffix(".pdf")
+    if args.pdf:
+        dest = Path(args.out) if args.out else src.with_suffix(".pdf")
+    else:
+        dest = Path(args.out) if args.out else src.with_name(src.stem + ".redacted.html")
     if dest.resolve() == src.resolve():
-        print("error: PDF output path is the same as the input.", file=sys.stderr)
+        print("error: output path is the same as the input.", file=sys.stderr)
         return 2
     try:
-        html = _html_for_report_input(src)
+        html = _html_for_report_input(src, redact=args.redact)
     except (OSError, UnicodeError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    if not _emit_pdf(html, dest):
-        return 1
-    print(f"PDF written to {dest.resolve()}")
+    if args.pdf:
+        if not _emit_pdf(html, dest):
+            return 1
+        print(f"PDF written to {dest.resolve()}")
+        return 0
+    dest.write_text(html, encoding="utf-8")
+    print(f"Redacted HTML report written to {dest.resolve()}")
     return 0
 
 
@@ -525,11 +539,14 @@ def build_parser() -> argparse.ArgumentParser:
     rd.add_argument("--out", help="output path (default: AUDIT.redacted.json next to the input)")
     rd.set_defaults(func=cmd_redact)
 
-    r = sub.add_parser("report", help="write a PDF from a saved JSON or HTML report")
+    r = sub.add_parser("report", help="write a PDF or shareable HTML report from saved JSON")
     r.add_argument("input", help="saved device JSON, or an HTML report")
     r.add_argument("--pdf", action="store_true",
                    help='write a PDF next to the input (needs: pip install "iotaudit[pdf]")')
-    r.add_argument("--out", help="PDF path (default: the input path with a .pdf suffix)")
+    r.add_argument("--redact", action="store_true",
+                   help="leave out local IPs, MACs and hostnames (JSON audits only); "
+                        "without --pdf, writes a .redacted.html report")
+    r.add_argument("--out", help="output path (default: .pdf next to the input, or .redacted.html with --redact)")
     r.set_defaults(func=cmd_report)
 
     s = sub.add_parser("scan", help="nmap open-port scan of one device")
