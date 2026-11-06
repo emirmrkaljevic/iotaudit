@@ -11,6 +11,7 @@ Short pages on typical network behaviour of common consumer IoT devices, based o
 - [What does a Philips Hue bridge send?](devices/philips-hue-bridge.html)
 - [What does a Chromecast or Google Cast device send?](devices/chromecast.html)
 - [What does a Shelly or Sonoff smart switch send?](devices/shelly-sonoff.html)
+- [What does a Ring doorbell or camera send?](devices/ring-doorbell.html)
 - [What does a Wi-Fi pet feeder send?](devices/wifi-pet-feeder.html)
 - [What does a Xiaomi Mi Home device send?](devices/xiaomi-mi-home.html)
 
