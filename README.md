@@ -341,6 +341,19 @@ scan & capture from the browser. Localhost by default; `--lan` is opt-in, token-
 answers private-range clients. iPhones can use the web UI but cannot capture on their own; see
 [docs/phones.md](docs/phones.md) for what works on Android and iOS and what does not.
 
+## DNS that bypasses your resolver
+
+Since 0.1.19, iotaudit flags devices that send DNS around your router, not
+only classic hardcoded public DNS (for example 8.8.8.8 or 1.1.1.1, including
+IPv6). It also reports:
+
+- DNS-over-TLS, when the device talks on port 853
+- DNS-over-HTTPS, when it uses a known DoH hostname, or HTTPS to a known
+  public resolver
+
+These show up as findings and in the one-line verdict, next to the grade.
+The check is local: it looks at the capture, not at a cloud service.
+
 ## Home Assistant
 
 Write a small JSON summary that a Home Assistant sensor can read, or publish
