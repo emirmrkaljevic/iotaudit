@@ -29,9 +29,9 @@ runs locally: no account, no telemetry, no cloud.
 
 It answers the questions you actually have about a cheap smart device:
 
-- **What is the short version?** A one-line verdict next to the grade. Open ports, public DNS,
-  TLS or plaintext, and destination countries are observed facts. Video, audio, and other
-  traffic patterns stay indicators with a confidence.
+- **What is the short version?** A one-line verdict next to the grade. Open ports, public DNS
+  (including DNS-over-TLS and DNS-over-HTTPS), TLS or plaintext, and destination countries
+  are observed facts. Video, audio, and other traffic patterns stay indicators with a confidence.
 - **Who does it talk to?** Domains (DNS + TLS SNI + HTTP Host), IPs, country, organisation.
   The report lists the destination countries for each device (observed fact).
 - **What does the traffic look like?** A separate per-device indicator for video, audio,
@@ -51,7 +51,7 @@ It answers the questions you actually have about a cheap smart device:
   results and exits 1 when a new destination, country, open port, worse grade,
   unencrypted flow, UPnP forward, or device appeared.
 
-> Status: **0.1.18**. CSV export via `iotaudit export --format csv`; Home Assistant summary via `--ha-json`. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.19**. Detects DNS-over-TLS and DNS-over-HTTPS as well as classic public DNS that bypasses your router. CSV export via `iotaudit export --format csv`; Home Assistant summary via `--ha-json`. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading with a
 > one-line safety verdict, HTML and PDF reports, a diff between two audits, offline known-issue
 > hints, a local web UI and the MCP server work. A full vulnerability feed is still on the

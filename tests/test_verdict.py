@@ -118,7 +118,7 @@ def test_pattern_indicator_is_hedged_and_never_certain():
         grade="B",
         dests=[
             Destination(
-                ip="9.9.9.10", country="DE", ports={443}, encryption_kind="tls", bytes_out=1000,
+                ip="3.4.5.6", country="DE", ports={443}, encryption_kind="tls", bytes_out=1000,
                 traffic_class=TrafficClass("telemetry", "certain"),
             ),
         ],

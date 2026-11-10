@@ -253,7 +253,138 @@ PORT_LABELS = {
     1443: "custom-1443",
 }
 
-PUBLIC_DNS = {"8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9", "208.67.222.222"}
+# Well-known public resolvers. Devices that send DNS (or DoT/DoH) here bypass
+# the router resolver and any local filter such as Pi-hole.
+PUBLIC_DNS = {
+    # Google Public DNS
+    "8.8.8.8", "8.8.4.4",
+    "2001:4860:4860::8888", "2001:4860:4860::8844",
+    # Cloudflare
+    "1.1.1.1", "1.0.0.1", "1.1.1.2", "1.0.0.2", "1.1.1.3", "1.0.0.3",
+    "2606:4700:4700::1111", "2606:4700:4700::1001",
+    "2606:4700:4700::1112", "2606:4700:4700::1002",
+    "2606:4700:4700::1113", "2606:4700:4700::1003",
+    # Quad9
+    "9.9.9.9", "149.112.112.112", "9.9.9.10", "149.112.112.10",
+    "2620:fe::fe", "2620:fe::9", "2620:fe::10", "2620:fe::fe:10",
+    # Cisco OpenDNS
+    "208.67.222.222", "208.67.220.220",
+    "2620:119:35::35", "2620:119:53::53",
+    # AdGuard DNS
+    "94.140.14.14", "94.140.15.15",
+    "2a10:50c0::ad1:ff", "2a10:50c0::ad2:ff",
+}
+
+# Hostnames used for DNS-over-HTTPS (and often DNS-over-TLS). Match exact or
+# as a suffix (foo.dns.google, dns.nextdns.io, instance.nextdns.io).
+DOH_HOST_SUFFIXES = (
+    "dns.google",
+    "dns.google.com",
+    "cloudflare-dns.com",
+    "one.one.one.one",
+    "dns.quad9.net",
+    "dns.adguard.com",
+    "dns.adguard-dns.com",
+    "doh.opendns.com",
+    "family.opendns.com",
+    "nextdns.io",
+    "dns.sb",
+    "doh.dns.sb",
+    "cleanbrowsing.org",
+    "dns.mullvad.net",
+    "mask.icloud.com",
+    "mask-h2.icloud.com",
+    "dns.alidns.com",
+    "doh.pub",
+    "dns.controld.com",
+)
+
+_DNS_PORTS = {53, 443, 853}
+
+
+def canon_ip(ip: str) -> str:
+    """Compressed, lowercase IP form, or the original string if it is not an IP."""
+    import ipaddress
+    try:
+        return format(ipaddress.ip_address(ip))
+    except ValueError:
+        return ip
+
+
+_PUBLIC_DNS_CANON = {canon_ip(ip) for ip in PUBLIC_DNS}
+
+
+def is_public_dns(ip: str | None) -> bool:
+    """True if ip is a well-known public resolver (IPv4 or IPv6, any compression)."""
+    if not ip:
+        return False
+    return canon_ip(ip) in _PUBLIC_DNS_CANON
+
+
+def is_doh_hostname(name: str | None) -> bool:
+    if not name:
+        return False
+    host = name.lower().rstrip(".")
+    return any(host == suffix or host.endswith("." + suffix) for suffix in DOH_HOST_SUFFIXES)
+
+
+def dest_names(dest) -> set[str]:
+    return {n.lower().rstrip(".") for n in (getattr(dest, "domains", None) or set()) if n}
+
+
+def dest_doh_names(dest) -> list[str]:
+    return sorted(n for n in dest_names(dest) if is_doh_hostname(n))
+
+
+def dest_uses_classic_dns(dest) -> bool:
+    """Plain DNS (port 53) to a public resolver, or a public-resolver IP with no ports yet."""
+    if not is_public_dns(getattr(dest, "ip", None)):
+        return False
+    ports = set(getattr(dest, "ports", None) or ())
+    return (not ports) or (53 in ports)
+
+
+def dest_uses_dot(dest) -> bool:
+    """DNS-over-TLS: destination port 853, which is assigned to DoT."""
+    ports = set(getattr(dest, "ports", None) or ())
+    return 853 in ports
+
+
+def dest_uses_doh(dest) -> bool:
+    """DNS-over-HTTPS: a known DoH hostname, or HTTPS to a known public resolver IP."""
+    if dest_doh_names(dest):
+        return True
+    ports = set(getattr(dest, "ports", None) or ())
+    return 443 in ports and is_public_dns(getattr(dest, "ip", None))
+
+
+def dest_doh_certain(dest) -> bool:
+    return bool(dest_doh_names(dest))
+
+
+def dest_is_dns_bypass(dest) -> bool:
+    return dest_uses_classic_dns(dest) or dest_uses_dot(dest) or dest_uses_doh(dest)
+
+
+def dest_is_dns_only(dest) -> bool:
+    """Traffic that is only DNS (plain, DoT, or DoH), not a cloud app."""
+    ports = set(getattr(dest, "ports", None) or ())
+    if dest_uses_dot(dest) or dest_uses_doh(dest) or dest_uses_classic_dns(dest):
+        return (not ports) or ports <= _DNS_PORTS
+    return False
+
+
+def tag_encrypted_dns(dest) -> None:
+    """Add protocol labels once destinations have ports and domains."""
+    protocols = getattr(dest, "protocols", None)
+    if protocols is None:
+        return
+    if dest_uses_dot(dest):
+        protocols.add("DNS-over-TLS")
+    if dest_doh_certain(dest) or dest_uses_doh(dest):
+        # Hostname match is certain; 443 to a public resolver is still labelled so
+        # the report can show the protocol next to the IP.
+        protocols.add("DNS-over-HTTPS")
 
 
 def is_cgnat(ip: str) -> bool:

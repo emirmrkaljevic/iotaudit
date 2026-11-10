@@ -13,6 +13,7 @@ from .enrich import (
     mac_vendor,
     org_for,
     special_use_label,
+    tag_encrypted_dns,
 )
 from .grading import (
     destination_country_summary,
@@ -100,6 +101,7 @@ def _enrich(d: Destination, geo: Geo, dns_map: dict) -> None:
         )
         d.__dict__["_tc_detail"] = tc.get("detail")
         d.bursts = detect_bursts(d.series)
+    tag_encrypted_dns(d)
 
 
 

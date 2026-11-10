@@ -3,6 +3,13 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.19] - 2026-11-10
+
+### Added
+- Findings for DNS-over-TLS (port 853) and DNS-over-HTTPS (known DoH hostnames,
+  or HTTPS to a known public resolver). These join the existing hardcoded public
+  DNS finding, now including IPv6 resolvers, and show up in the one-line verdict.
+
 ## [0.1.18] - 2026-11-06
 
 ### Added

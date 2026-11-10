@@ -7,7 +7,16 @@ is never worded as proof, and nothing here accuses a vendor.
 
 from __future__ import annotations
 
-from .enrich import PUBLIC_DNS, is_cgnat, is_special_use
+from .enrich import (
+    dest_doh_certain,
+    dest_doh_names,
+    dest_is_dns_only,
+    dest_uses_classic_dns,
+    dest_uses_doh,
+    dest_uses_dot,
+    is_cgnat,
+    is_special_use,
+)
 from .hints import affects_grade
 from .traffic import PATTERN_DISPLAY
 
@@ -24,6 +33,8 @@ CATEGORY_BY_TITLE = {
     "Open port": "port",
     "Data sent": "destination",
     "Hardcoded": "dns",
+    "DNS-over-TLS": "dns",
+    "DNS-over-HTTPS": "dns",
     "STUN": "traffic-class",
     "Cloud servers": "location",
     "LAN peer": "traffic-class",
@@ -206,7 +217,7 @@ def findings_for(device) -> list[dict]:
         label = ", ".join(sorted(d.domains)) or d.ip
         if d.encryption_kind == "plaintext":
             # DNS to public resolvers is expected plaintext (covered by the DNS finding).
-            if d.ports <= {53} or d.ip in PUBLIC_DNS and d.ports <= {53}:
+            if not d.ports or d.ports <= {53}:
                 pass
             else:
                 frac = d.readable_fraction
@@ -254,7 +265,7 @@ def findings_for(device) -> list[dict]:
                           "carrier-grade NAT during P2P video.",
                 "category": "traffic-class", "confidence": "medium",
             })
-        if d.ip in PUBLIC_DNS or (53 in d.ports and d.ip in PUBLIC_DNS):
+        if dest_uses_classic_dns(d):
             f.append({
                 "severity": "medium",
                 "title": "Hardcoded public DNS (bypasses router)",
@@ -262,9 +273,39 @@ def findings_for(device) -> list[dict]:
                           "Queries may leave your network even if you run Pi-hole.",
                 "category": "dns", "confidence": "certain",
             })
-    # Hardcoded DNS also via destination list even if org enrichment named it
+        if dest_uses_dot(d):
+            label = (dest_doh_names(d) or [d.ip])[0]
+            f.append({
+                "severity": "medium",
+                "title": "DNS-over-TLS (bypasses router)",
+                "detail": f"Device sent DNS-over-TLS (port 853) to {label}, bypassing your "
+                          "router's DNS. Queries may leave your network even if you run Pi-hole.",
+                "category": "dns", "confidence": "certain",
+            })
+        if dest_uses_doh(d):
+            names = dest_doh_names(d)
+            if dest_doh_certain(d):
+                detail = (
+                    f"Device sent DNS-over-HTTPS to {names[0]}, bypassing your router's DNS. "
+                    "Queries may leave your network even if you run Pi-hole."
+                )
+                confidence = "certain"
+            else:
+                detail = (
+                    f"HTTPS to {d.ip}, a known public DNS resolver, which is how "
+                    "DNS-over-HTTPS usually looks. Queries may leave your network even "
+                    "if you run Pi-hole."
+                )
+                confidence = "high"
+            f.append({
+                "severity": "medium",
+                "title": "DNS-over-HTTPS (bypasses router)",
+                "detail": detail,
+                "category": "dns", "confidence": confidence,
+            })
+    # Classic public DNS also via destination list even if org enrichment named it
     for d in dests:
-        if d.ip in PUBLIC_DNS and not any(x["title"].startswith("Hardcoded") for x in f):
+        if dest_uses_classic_dns(d) and not any(x["title"].startswith("Hardcoded") for x in f):
             f.append({
                 "severity": "medium",
                 "title": "Hardcoded public DNS (bypasses router)",
@@ -491,8 +532,15 @@ def summarize(device) -> str:
         )
     if any(p.get("port") == 23 for p in device.open_ports):
         bits.append("Telnet (port 23) is open on the LAN. Change defaults or block it.")
-    if any(d.ip in PUBLIC_DNS for d in dests):
-        bits.append("Uses public DNS directly (bypasses your router).")
+    dns_bits = []
+    if any(dest_uses_classic_dns(d) for d in dests):
+        dns_bits.append("public DNS directly")
+    if any(dest_uses_doh(d) for d in dests):
+        dns_bits.append("DNS-over-HTTPS")
+    if any(dest_uses_dot(d) for d in dests):
+        dns_bits.append("DNS-over-TLS")
+    if dns_bits:
+        bits.append("Uses " + " and ".join(dns_bits) + " (bypasses your router).")
     if any(3478 in d.ports for d in dests):
         bits.append("Used STUN/TURN (typical for P2P video setup).")
     lan = sum(d.bytes_out for ip, d in device.lan_peers.items()
@@ -557,10 +605,7 @@ def _ports_clause(labels: list[str]) -> str:
 
 def _dns_only(dest) -> bool:
     """DNS itself is not cloud-app traffic. Public resolvers get their own fact."""
-    ports = set(getattr(dest, "ports", None) or ())
-    if not ports:
-        return getattr(dest, "ip", None) in PUBLIC_DNS
-    return ports <= {53}
+    return dest_is_dns_only(dest)
 
 
 def _country_label(rows: list[dict]) -> str | None:
@@ -712,8 +757,12 @@ def safety_verdict(device) -> str:
     elif device.open_ports:
         facts.append("no risky ports")
 
-    if any(d.ip in PUBLIC_DNS for d in dests):
+    if any(dest_uses_classic_dns(d) for d in dests):
         facts.append("uses public DNS directly")
+    if any(dest_uses_doh(d) for d in dests):
+        facts.append("uses DNS-over-HTTPS")
+    if any(dest_uses_dot(d) for d in dests):
+        facts.append("uses DNS-over-TLS")
 
     cloud = [d for d in dests if not _dns_only(d)]
     country_rows, _unresolved = destination_country_summary(dests)
