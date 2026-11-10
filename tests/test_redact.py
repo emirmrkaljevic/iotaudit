@@ -80,3 +80,103 @@ def test_report_redact_rejects_html_input(tmp_path, capsys):
     html.write_text("<html><body>ok</body></html>", encoding="utf-8")
     assert main(["report", "--redact", str(html)]) == 1
     assert "JSON audit" in capsys.readouterr().err
+
+
+NESTED = {
+    "meta": {
+        "source": "auto:wlan0",
+        "iface": "wlan0",
+        "ssid": "ExampleNet",
+        "path": "/tmp/example-capture.pcap",
+        "pcap": "/tmp/example-capture.pcap",
+        "duration": 60,
+    },
+    "devices": [
+        {
+            "ip": "192.0.2.10",
+            "mac": "02:00:00:00:00:0a",
+            "hostname": "example-plug",
+            "vendor": "Example Vendor",
+            "findings": ["Uses 8.8.8.8 instead of your router DNS"],
+            "iface": "wlan0",
+            "ssid": "ExampleNet",
+            "pcap": "/tmp/example-capture.pcap",
+            "meta": {
+                "source": "hotspot:wlan0",
+                "interface": "wlan0",
+                "ssid": "ExampleNet",
+                "path": "/tmp/example-capture.pcap",
+                "duration": 30,
+            },
+            "known_issue_hints": [
+                {"source": "port-scan", "title": "Example issue", "cve": "CVE-2020-0000"},
+                {"source": "upnp", "title": "Example UPnP issue"},
+            ],
+            "destinations": [
+                {"ip": "8.8.8.8", "domains": ["device.example"], "path": "/v1/status"},
+                {"ip": "192.0.2.20", "domains": []},
+            ],
+        }
+    ],
+}
+
+# Values that must not appear in a redacted copy of NESTED.
+_NESTED_SECRETS = (
+    "192.0.2.10",
+    "192.0.2.20",
+    "02:00:00:00:00:0a",
+    "example-plug",
+    "wlan0",
+    "ExampleNet",
+    "/tmp/example-capture.pcap",
+    "auto:wlan0",
+    "hotspot:wlan0",
+)
+
+
+def test_redact_drops_nested_capture_metadata():
+    original = json.loads(json.dumps(NESTED))
+    out = redact_audit(NESTED)
+    assert NESTED == original  # input is not modified
+    text = json.dumps(out)
+    for secret in _NESTED_SECRETS:
+        assert secret not in text
+    assert "8.8.8.8" in text and "device.example" in text
+    assert "Uses 8.8.8.8 instead of your router DNS" in text
+    assert out["meta"]["duration"] == 60 and out["meta"]["redacted"] is True
+    assert "source" not in out["meta"] and "ssid" not in out["meta"]
+    device = out["devices"][0]
+    assert device["ip"] == "lan-1" and device["hostname"] == "host-1"
+    assert "iface" not in device and "ssid" not in device and "pcap" not in device
+    assert device["meta"]["duration"] == 30
+    assert "source" not in device["meta"] and "path" not in device["meta"]
+    assert "interface" not in device["meta"] and "ssid" not in device["meta"]
+    hints = device["known_issue_hints"]
+    assert hints[0]["source"] == "port-scan" and hints[1]["source"] == "upnp"
+    dest = device["destinations"][0]
+    assert dest["path"] == "/v1/status"
+    assert dest["ip"] == "8.8.8.8"
+
+
+def test_redact_nested_meta_on_plain_device_list():
+    devices = json.loads(json.dumps(NESTED["devices"]))
+    out = redact_audit(devices)
+    assert isinstance(out, list)
+    text = json.dumps(out)
+    for secret in ("wlan0", "ExampleNet", "/tmp/example-capture.pcap", "hotspot:wlan0", "192.0.2.10"):
+        assert secret not in text
+    assert out[0]["known_issue_hints"][0]["source"] == "port-scan"
+    assert out[0]["destinations"][0]["path"] == "/v1/status"
+    assert "source" not in out[0]["meta"]
+
+
+def test_report_redact_hides_nested_capture_metadata(tmp_path, capsys):
+    src = tmp_path / "audit.json"
+    src.write_text(json.dumps(NESTED), encoding="utf-8")
+    assert main(["report", "--redact", str(src)]) == 0
+    html = (tmp_path / "audit.redacted.html").read_text(encoding="utf-8")
+    for secret in _NESTED_SECRETS:
+        assert secret not in html
+    assert "8.8.8.8" in html and "device.example" in html
+    assert "source:" not in html
+    assert "ExampleNet" not in html

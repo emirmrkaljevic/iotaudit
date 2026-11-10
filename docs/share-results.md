@@ -36,8 +36,10 @@ pip install -U iotaudit
 iotaudit report audit.json --redact
 ```
 
-That writes `audit.redacted.html` with private and link-local IPs replaced by labels like `lan-1`, MAC addresses by `02:00:00:00:00:01` style placeholders, and local hostnames by `host-1`. The same device keeps the same label everywhere. Interface names and capture file paths are dropped. Public cloud destinations stay. Add `--pdf` if you want a PDF (`pip install "iotaudit[pdf]"`).
+That writes `audit.redacted.html` with private and link-local IPs replaced by labels like `lan-1`, MAC addresses by `02:00:00:00:00:01` style placeholders, and local hostnames by `host-1`. The same device keeps the same label everywhere.
 
-If you only need the JSON copy, `iotaudit redact audit.json` still writes `audit.redacted.json`. Give the result a quick read before you post it. Only audit networks and devices you own. All data stays local, no telemetry.
+Capture metadata is removed from the top-level `meta` object and from any nested `meta` object: `source`, `iface`, `interface`, `ssid`, `path` and `pcap`. The keys `iface`, `interface`, `ssid` and `pcap` are also dropped if they appear elsewhere on a device. Public cloud destinations stay, as do useful similarly named fields that are not capture metadata (for example a known-issue hint with `"source": "port-scan"`, or an HTTP `path` on a destination). Add `--pdf` if you want a PDF (`pip install "iotaudit[pdf]"`).
+
+If you only need the JSON copy, `iotaudit redact audit.json` still writes `audit.redacted.json`. Give the result a quick read before you post it. Redaction is not a guarantee of complete anonymity. Only audit networks and devices you own. All data stays local, no telemetry.
 
 [All device pages](./)

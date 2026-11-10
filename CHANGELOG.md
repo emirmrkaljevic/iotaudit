@@ -3,6 +3,11 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.21] - 2026-11-11
+
+### Fixed
+- `--redact` now drops capture metadata (`source`, `iface`, `interface`, `ssid`, `path`, `pcap`) on nested `meta` objects as well as the top-level one, and drops `iface`, `interface`, `ssid` and `pcap` keys wherever they appear. Hint sources and HTTP paths are kept.
+
 ## [0.1.20] - 2026-11-10
 
 ### Added

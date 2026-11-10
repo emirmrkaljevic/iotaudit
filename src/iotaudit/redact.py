@@ -1,9 +1,11 @@
 """Remove local network details from a saved audit before sharing it.
 
 Private and link-local IP addresses, MAC addresses, local hostnames, and
-capture source details (interface names, file paths) are replaced with stable
-placeholders, so the same device keeps the same label everywhere in the file.
-Public cloud destinations stay as they are: they are the point of the report.
+capture source details (interface names, SSIDs, file paths) are replaced with
+stable placeholders, so the same device keeps the same label everywhere in the
+file. Capture metadata is removed from the top-level meta object and from any
+nested meta object. Public cloud destinations stay as they are: they are the
+point of the report.
 """
 
 from __future__ import annotations
@@ -15,7 +17,14 @@ _MAC = re.compile(r"\b[0-9A-Fa-f]{2}(?:[:-][0-9A-Fa-f]{2}){5}\b")
 _IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 _IPV6 = re.compile(r"(?<![0-9A-Za-z:])[0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,7}(?![0-9A-Za-z:])")
 _LOCAL_NAME_KEYS = {"hostname", "mdns_name", "dhcp_name"}
-_META_DROP = {"source", "iface", "interface", "ssid", "path", "pcap"}
+# Capture-session keys. These are not used for findings or HTTP fields in
+# iotaudit audits, so they are dropped wherever they appear as object keys.
+_CAPTURE_DROP = frozenset({"iface", "interface", "ssid", "pcap"})
+# "source" and "path" are capture metadata inside a meta object (auto:wlan0,
+# a pcap path). The same names are kept elsewhere: hint source is "upnp" or
+# "port-scan", and a destination may include an HTTP path.
+_META_ONLY_DROP = frozenset({"source", "path"})
+_META_DROP = _CAPTURE_DROP | _META_ONLY_DROP
 
 
 def _is_local(text: str) -> bool:
@@ -59,7 +68,12 @@ class Redactor:
 
     def walk(self, obj, key: str | None = None):
         if isinstance(obj, dict):
-            return {self.text(k) if isinstance(k, str) else k: self.walk(v, k) for k, v in obj.items()}
+            drop = _META_DROP if key == "meta" else _CAPTURE_DROP
+            return {
+                self.text(k) if isinstance(k, str) else k: self.walk(v, k)
+                for k, v in obj.items()
+                if k not in drop
+            }
         if isinstance(obj, list):
             return [self.walk(v, key) for v in obj]
         if isinstance(obj, str):
@@ -86,8 +100,11 @@ def redact_audit(data):
     red = Redactor()
     _collect_names(data, red)
     if isinstance(data, dict):
-        meta = {k: v for k, v in (data.get("meta") or {}).items() if k not in _META_DROP}
-        out = red.walk({k: v for k, v in data.items() if k != "meta"})
-        out["meta"] = {**red.walk(meta), "redacted": True}
+        out = red.walk(data)
+        meta = out.get("meta")
+        if isinstance(meta, dict):
+            out["meta"] = {**meta, "redacted": True}
+        else:
+            out["meta"] = {"redacted": True}
         return out
     return red.walk(data)
