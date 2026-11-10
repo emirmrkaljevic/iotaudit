@@ -3,9 +3,51 @@ title: iotaudit in Home Assistant
 ---
 # Show iotaudit results in Home Assistant
 
-iotaudit can write a small JSON file after each audit. Home Assistant reads it with a `command_line` sensor, so you get a dashboard card and can trigger an automation when a device changes or the worst grade drops. Everything stays on your machine.
+iotaudit can feed a compact grade summary into Home Assistant in two ways:
+publish it over MQTT (best when iotaudit runs on a different machine than
+Home Assistant), or write a small JSON file that a `command_line` sensor
+reads. Either way you get a dashboard card and can trigger an automation
+when a device changes or the worst grade drops.
 
-## 1. Write the summary
+## MQTT (recommended when Home Assistant is on another host)
+
+If you already run an MQTT broker for Home Assistant (Mosquitto is the usual
+choice), iotaudit can publish the summary there. From 0.1.20 it also writes
+Home Assistant MQTT discovery configs, so the sensors appear without extra
+YAML. Enable the MQTT integration in Home Assistant first.
+
+```bash
+# password stays in the environment, not on the command line
+export IOTAUDIT_MQTT_PASSWORD='your-broker-password'
+iotaudit export ~/iotaudit/2026-01-01/120000.json --compare earlier.json \
+  --ha-mqtt 192.168.1.2
+```
+
+`--ha-mqtt` accepts a hostname, `host:port`, or an `mqtt://` / `mqtts://` URL.
+The default port is 1883 (8883 when you use `mqtts://`). Set a username with
+`--ha-mqtt-user`, or with `IOTAUDIT_MQTT_USER`. You can also run it from the
+one-command audit:
+
+```bash
+sudo iotaudit auto --i-own-this-network --ha-mqtt 192.168.1.2 --ha-mqtt-user home
+```
+
+By default the messages are retained under the `iotaudit` topic prefix:
+
+- `iotaudit/summary` is the full JSON (same shape as the file export)
+- `iotaudit/worst_grade`, `iotaudit/changed` (how many devices changed),
+  `iotaudit/security_relevant`, and `iotaudit/generated` are compact values
+  for simple sensors
+- `iotaudit/device/<id>/grade` and `iotaudit/device/<id>/state` cover each device
+
+Discovery configs go to `homeassistant/sensor/.../config` (and a binary sensor
+for `security_relevant`). To publish only the `iotaudit/...` topics, add
+`--no-ha-mqtt-discovery`. To use a different prefix: `--ha-mqtt-topic mysensors`.
+
+This talks to a broker you already run. iotaudit does not start one, and it
+does not need a Python MQTT package.
+
+## 1. Write the summary (file)
 
 Run the audit on a machine that can see your network, and point `--ha-json` at a folder Home Assistant can read:
 

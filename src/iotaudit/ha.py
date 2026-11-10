@@ -2,7 +2,7 @@
 
 Home Assistant can read this file with a ``command_line`` sensor
 (``cat summary.json``) and pull per-device values out with templates.
-Everything stays on disk; nothing is sent anywhere.
+The same summary can also be published to an MQTT broker you already run.
 """
 
 from __future__ import annotations
@@ -131,3 +131,175 @@ def redact_summary(summary: dict) -> dict:
         out["device_list"].append(row)
     out["redacted"] = True
     return out
+
+
+def topic_slug(value: str) -> str:
+    """Turn a name or IP into a short MQTT topic / unique_id fragment."""
+    out = []
+    prev_us = False
+    for ch in (value or "").lower():
+        if ch.isalnum():
+            out.append(ch)
+            prev_us = False
+        elif not prev_us:
+            out.append("_")
+            prev_us = True
+    return "".join(out).strip("_") or "device"
+
+
+def device_unique_id(device: dict, index: int) -> str:
+    ip = topic_slug(str(device.get("ip") or ""))
+    name = topic_slug(str(device.get("name") or ""))
+    if ip and name and name != ip:
+        return f"iotaudit_{name}_{ip}"
+    if ip:
+        return f"iotaudit_{ip}"
+    if name:
+        return f"iotaudit_{name}"
+    return f"iotaudit_device_{index}"
+
+
+def ha_mqtt_messages(
+    summary: dict,
+    *,
+    base_topic: str = "iotaudit",
+    discovery: bool = True,
+    discovery_prefix: str = "homeassistant",
+    version: str | None = None,
+) -> list[tuple[str, str, bool]]:
+    """Build retained MQTT messages for a Home Assistant summary.
+
+    Publishes the full JSON under ``base_topic/summary``, plus compact
+    topics for the worst grade, the changed flag, and each device grade.
+    When *discovery* is true, also publishes Home Assistant MQTT discovery
+    configs so sensors appear without YAML.
+    """
+    from . import __version__
+
+    sw = version or __version__
+    base = base_topic.strip().strip("/") or "iotaudit"
+    prefix = discovery_prefix.strip().strip("/") or "homeassistant"
+    payload = json.dumps(summary, separators=(",", ":"))
+    messages: list[tuple[str, str, bool]] = [
+        (f"{base}/summary", payload, True),
+        (f"{base}/worst_grade", str(summary.get("worst_grade") or ""), True),
+        (f"{base}/changed", str(int(summary.get("changed") or 0)), True),
+        (f"{base}/security_relevant", "true" if summary.get("security_relevant") else "false", True),
+        (f"{base}/generated", str(summary.get("generated") or ""), True),
+    ]
+    devices = list(summary.get("device_list") or [])
+    for i, device in enumerate(devices):
+        uid = device_unique_id(device, i)
+        messages.append((f"{base}/device/{uid}/grade", str(device.get("grade") or ""), True))
+        messages.append((
+            f"{base}/device/{uid}/state",
+            json.dumps(device, separators=(",", ":")),
+            True,
+        ))
+
+    if not discovery:
+        return messages
+
+    ha_device = {
+        "identifiers": ["iotaudit"],
+        "name": "iotaudit",
+        "manufacturer": "iotaudit",
+        "model": "network audit",
+        "sw_version": sw,
+    }
+
+    def config(component: str, object_id: str, body: dict) -> tuple[str, str, bool]:
+        body = dict(body)
+        body["device"] = ha_device
+        body.setdefault("availability_topic", f"{base}/availability")
+        return (f"{prefix}/{component}/{object_id}/config", json.dumps(body, separators=(",", ":")), True)
+
+    messages.append((f"{base}/availability", "online", True))
+    messages.append(config("sensor", "iotaudit_worst_grade", {
+        "name": "iotaudit worst grade",
+        "unique_id": "iotaudit_worst_grade",
+        "state_topic": f"{base}/worst_grade",
+        "icon": "mdi:shield-alert",
+    }))
+    messages.append(config("binary_sensor", "iotaudit_changed", {
+        "name": "iotaudit something changed",
+        "unique_id": "iotaudit_changed",
+        "state_topic": f"{base}/security_relevant",
+        "payload_on": "true",
+        "payload_off": "false",
+        "device_class": "problem",
+    }))
+    messages.append(config("sensor", "iotaudit_changed_count", {
+        "name": "iotaudit changed devices",
+        "unique_id": "iotaudit_changed_count",
+        "state_topic": f"{base}/changed",
+        "icon": "mdi:swap-horizontal",
+    }))
+    messages.append(config("sensor", "iotaudit_generated", {
+        "name": "iotaudit last audit",
+        "unique_id": "iotaudit_generated",
+        "state_topic": f"{base}/generated",
+        "icon": "mdi:clock-outline",
+    }))
+    messages.append(config("sensor", "iotaudit_summary", {
+        "name": "iotaudit summary",
+        "unique_id": "iotaudit_summary",
+        "state_topic": f"{base}/summary",
+        "value_template": "{{ value_json.worst_grade }}",
+        "json_attributes_topic": f"{base}/summary",
+        "icon": "mdi:lan",
+    }))
+    for i, device in enumerate(devices):
+        uid = device_unique_id(device, i)
+        label = device.get("name") or device.get("ip") or f"device {i + 1}"
+        messages.append(config("sensor", uid, {
+            "name": f"iotaudit {label}",
+            "unique_id": uid,
+            "state_topic": f"{base}/device/{uid}/grade",
+            "json_attributes_topic": f"{base}/device/{uid}/state",
+            "icon": "mdi:router-wireless",
+        }))
+    return messages
+
+
+def publish_ha_summary(
+    summary: dict,
+    target_spec: str,
+    *,
+    base_topic: str = "iotaudit",
+    discovery: bool = True,
+    username: str | None = None,
+    password: str | None = None,
+) -> int:
+    """Publish *summary* to a broker. Raises ValueError or mqttpub.MqttError."""
+    from .mqttpub import parse_mqtt_target, publish_many
+
+    target = parse_mqtt_target(target_spec, username=username, password=password)
+    messages = ha_mqtt_messages(summary, base_topic=base_topic, discovery=discovery)
+    return publish_many(target, messages)
+
+
+def publish_ha_mqtt(summary: dict, args) -> int:
+    """Publish from argparse flags. Returns 0 on success, 1 on failure. Prints one line."""
+    import sys
+
+    from .mqttpub import MqttError, parse_mqtt_target
+
+    target = getattr(args, "ha_mqtt", None)
+    if not target:
+        return 0
+    try:
+        count = publish_ha_summary(
+            summary,
+            target,
+            base_topic=getattr(args, "ha_mqtt_topic", None) or "iotaudit",
+            discovery=getattr(args, "ha_mqtt_discovery", True),
+            username=getattr(args, "ha_mqtt_user", None),
+        )
+        info = parse_mqtt_target(target, username=getattr(args, "ha_mqtt_user", None))
+        scheme = "mqtts" if info["tls"] else "mqtt"
+        print(f"Published {count} MQTT messages to {scheme}://{info['host']}:{info['port']}")
+        return 0
+    except (ValueError, OSError, TimeoutError, MqttError) as exc:
+        print(f"error: MQTT publish failed: {exc}", file=sys.stderr)
+        return 1

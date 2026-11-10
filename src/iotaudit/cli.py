@@ -178,7 +178,14 @@ def cmd_export(args) -> int:
     import json
 
     from .diff import diff_audits, load_audit
-    from .ha import ha_summary, redact_summary, summary_csv, summary_markdown, write_ha_summary
+    from .ha import (
+        ha_summary,
+        publish_ha_mqtt,
+        redact_summary,
+        summary_csv,
+        summary_markdown,
+        write_ha_summary,
+    )
 
     try:
         new = load_audit(args.audit)
@@ -202,19 +209,30 @@ def cmd_export(args) -> int:
             print(f"{args.format.upper()} summary written to {dest.resolve()}")
         else:
             sys.stdout.write(text)
-        return 0
-    if args.out:
+    elif args.out:
         dest = write_ha_summary(args.out, summary)
         print(f"Home Assistant summary written to {dest.resolve()}")
-    else:
+    elif not getattr(args, "ha_mqtt", None):
         print(json.dumps(summary, indent=2))
-    return 0
+    return publish_ha_mqtt(summary, args)
 
 
 def cmd_auto(args) -> int:
     from .auto import run_auto
 
     return run_auto(args)
+
+
+def add_ha_mqtt_args(sp) -> None:
+    sp.add_argument("--ha-mqtt", metavar="HOST[:PORT]",
+                    help="publish the Home Assistant summary to an MQTT broker "
+                         "(mqtt:// or mqtts:// URLs also work)")
+    sp.add_argument("--ha-mqtt-topic", default="iotaudit",
+                    help="MQTT topic prefix (default: iotaudit)")
+    sp.add_argument("--ha-mqtt-user",
+                    help="MQTT username (password: IOTAUDIT_MQTT_PASSWORD)")
+    sp.add_argument("--ha-mqtt-discovery", action=argparse.BooleanOptionalAction, default=True,
+                    help="publish Home Assistant MQTT discovery configs (default: on)")
 
 
 def cmd_capture(args) -> int:
@@ -472,6 +490,7 @@ def build_parser() -> argparse.ArgumentParser:
                       help="folder for dated reports (default: ~/iotaudit)")
     auto.add_argument("--ha-json", metavar="PATH",
                       help="also write a compact summary for a Home Assistant sensor")
+    add_ha_mqtt_args(auto)
     auto.set_defaults(func=cmd_auto)
 
     def common(sp):
@@ -532,6 +551,7 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--out", help="output file (default: print to stdout)")
     e.add_argument("--redact", action="store_true",
                    help="leave out IP addresses, for posting the summary publicly")
+    add_ha_mqtt_args(e)
     e.set_defaults(func=cmd_export)
 
     rd = sub.add_parser("redact", help="copy a saved JSON audit without local IPs, MACs and hostnames")

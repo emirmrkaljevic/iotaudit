@@ -51,7 +51,7 @@ It answers the questions you actually have about a cheap smart device:
   results and exits 1 when a new destination, country, open port, worse grade,
   unencrypted flow, UPnP forward, or device appeared.
 
-> Status: **0.1.19**. Detects DNS-over-TLS and DNS-over-HTTPS as well as classic public DNS that bypasses your router. CSV export via `iotaudit export --format csv`; Home Assistant summary via `--ha-json`. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
+> Status: **0.1.20**. Publish the Home Assistant grade summary over MQTT (`--ha-mqtt`), with optional MQTT discovery so sensors appear without YAML. Detects DNS-over-TLS and DNS-over-HTTPS as well as classic public DNS that bypasses your router. CSV export via `iotaudit export --format csv`; file-based Home Assistant summary via `--ha-json`. `iotaudit auto` discovers devices, runs the safe checks, captures passively, and writes the report in one command. Hotspot + ARP capture, pcap and PCAPdroid analysis, IPv6/NDP, device-type
 > identification, UPnP port-forward audit, an opt-in default-password check, grading with a
 > one-line safety verdict, HTML and PDF reports, a diff between two audits, offline known-issue
 > hints, a local web UI and the MCP server work. A full vulnerability feed is still on the
@@ -343,15 +343,21 @@ answers private-range clients. iPhones can use the web UI but cannot capture on 
 
 ## Home Assistant
 
-Write a small JSON summary that a Home Assistant sensor can read:
+Write a small JSON summary that a Home Assistant sensor can read, or publish
+the same summary to an MQTT broker you already run (Mosquitto is the usual
+choice). MQTT is the easier path when iotaudit and Home Assistant are on
+different machines; from 0.1.20, `--ha-mqtt` also writes MQTT discovery
+configs so the sensors appear without YAML:
 
 ```bash
+export IOTAUDIT_MQTT_PASSWORD='your-broker-password'
+iotaudit export ~/iotaudit/2026-01-01/120000.json --compare earlier.json --ha-mqtt 192.168.1.2
 sudo iotaudit auto --ha-json /path/to/homeassistant/config/iotaudit.json
 iotaudit export ~/iotaudit/2026-01-01/120000.json --compare earlier.json --out iotaudit.json
 ```
 
 Each device gets `name`, `ip`, `grade`, `findings`, and `changed` (null on the first run).
-Ready-to-paste sensor YAML: [Home Assistant guide](https://emirmrkaljevic.github.io/iotaudit/home-assistant.html).
+Ready-to-paste sensor YAML and MQTT details: [Home Assistant guide](https://emirmrkaljevic.github.io/iotaudit/home-assistant.html).
 
 For a spreadsheet, the same summary as CSV (one row per device):
 

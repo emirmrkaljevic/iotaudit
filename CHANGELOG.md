@@ -3,6 +3,17 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.20] - 2026-11-10
+
+### Added
+- `iotaudit export` and `iotaudit auto` can publish the Home Assistant grade
+  summary to an MQTT broker (`--ha-mqtt HOST[:PORT]`, or an `mqtt://` /
+  `mqtts://` URL). Messages are retained under the `iotaudit` topic prefix.
+  Home Assistant MQTT discovery is on by default so sensors appear without
+  YAML; use `--no-ha-mqtt-discovery` to send only the raw topics. Username:
+  `--ha-mqtt-user`. Password: `IOTAUDIT_MQTT_PASSWORD`. No extra Python
+  package is required.
+
 ## [0.1.19] - 2026-11-10
 
 ### Added

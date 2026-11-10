@@ -512,11 +512,9 @@ def run_auto(
     if _write_pdf(html, pdf_path):
         print(f"PDF written to {pdf_path.resolve()}")
 
-    ha_path = getattr(args, "ha_json", None)
     if previous_path is None:
         print("No earlier audit in this folder. Nothing to compare.", file=sys.stderr)
-        _write_ha(ha_path, devices, None, when)
-        return 0
+        return _write_ha(args, devices, None, when)
     try:
         previous = load_audit(previous_path)
     except (OSError, UnicodeError, ValueError) as exc:
@@ -530,18 +528,27 @@ def run_auto(
     )
     print()
     print(format_diff(result), end="")
-    _write_ha(ha_path, devices, result, when)
-    return 1 if result["security_relevant"] else 0
+    mqtt_rc = _write_ha(args, devices, result, when)
+    if result["security_relevant"]:
+        return 1
+    return mqtt_rc
 
 
-def _write_ha(path, devices: list[dict], diff: dict | None, when: datetime) -> None:
-    if not path:
-        return
-    from .ha import ha_summary, write_ha_summary
+def _write_ha(args, devices: list[dict], diff: dict | None, when: datetime) -> int:
+    path = getattr(args, "ha_json", None)
+    mqtt = getattr(args, "ha_mqtt", None)
+    if not path and not mqtt:
+        return 0
+    from .ha import ha_summary, publish_ha_mqtt, write_ha_summary
 
-    try:
-        dest = write_ha_summary(path, ha_summary(devices, diff, now=when))
-    except OSError as exc:
-        print(f"Home Assistant summary skipped: {exc}", file=sys.stderr)
-        return
-    print(f"Home Assistant summary written to {dest.resolve()}")
+    summary = ha_summary(devices, diff, now=when)
+    if path:
+        try:
+            dest = write_ha_summary(path, summary)
+        except OSError as exc:
+            print(f"Home Assistant summary skipped: {exc}", file=sys.stderr)
+        else:
+            print(f"Home Assistant summary written to {dest.resolve()}")
+    if mqtt:
+        return publish_ha_mqtt(summary, args)
+    return 0
