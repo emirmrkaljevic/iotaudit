@@ -285,6 +285,7 @@ def to_dict(dev: Device) -> dict:
         "ip": dev.ip,
         "mac": dev.mac,
         "vendor": dev.vendor,
+        "hostname": dev.hostname,
         "profile": dev.profile,
         "grade": dev.grade,
         "score": dev.score,

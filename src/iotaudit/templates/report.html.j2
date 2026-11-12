@@ -50,6 +50,7 @@ All data was processed locally. IP Geolocation by DB-IP (https://db-ip.com).</p>
     {% if d.verdict %}<p class="verdict"><b>Verdict.</b> {{ d.verdict }}</p>{% endif %}
   </div>
   <p class="muted">MAC {{ d.mac or "?" }} &middot; {{ d.vendor or "unknown vendor" }}
+  {% if d.hostname %}&middot; {{ d.hostname }}{% endif %}
   {% if d.profile %}&middot; profile: {{ d.profile }}{% endif %} &middot; score {{ d.score }}/100</p>
   {% if d.looks_like %}<p class="muted">Identified as {{ d.looks_like }}.</p>{% endif %}
   {% if d.device_type and d.device_type.type %}<p class="muted"><b>Looks like a {{ d.device_type.label }}</b>

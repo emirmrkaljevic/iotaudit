@@ -3,6 +3,11 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.22] - 2026-11-12
+
+### Added
+- Bundled device profiles for Ring doorbells and cameras, Philips Hue bridges, Shelly devices, and Sonoff / eWeLink switches. Once a profile matches, destinations outside its usual cloud are flagged. Profiles can also match a device hostname, so a Shelly with cloud disabled is still recognised. Saved audits and the HTML report include the hostname when it is known; `--redact` still replaces it.
+
 ## [0.1.21] - 2026-11-11
 
 ### Fixed

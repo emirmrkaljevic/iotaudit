@@ -10,7 +10,7 @@ Typical network behaviour of Ring doorbells and cameras, based on public documen
 - On the LAN the device is quiet when idle. Motion and live view open short-lived media sessions to the cloud; two-way talk adds another stream.
 - Ring does not expose RTSP or ONVIF on the LAN the way many third-party cameras do.
 
-A Ring device talking to domains outside Amazon and Ring, or opening unexpected LAN ports, is worth a closer look. iotaudit flags unexpected destinations from a passive capture on your own network and writes a one-page report per device.
+A Ring device talking to domains outside Amazon and Ring, or opening unexpected LAN ports, is worth a closer look. iotaudit includes a bundled Ring profile, so once ring.com is seen, destinations outside Ring and Amazon are flagged. It writes a one-page report per device.
 
 
 ## Check your own devices

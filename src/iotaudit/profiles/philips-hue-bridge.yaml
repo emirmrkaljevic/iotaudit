@@ -1,0 +1,15 @@
+id: philips-hue-bridge
+name: Philips Hue bridge
+match:
+  domains: ["meethue.com"]
+  hostnames: ["hue-bridge", "philips-hue"]
+expected_domains: ["meethue.com", "ntp.org"]
+expected_ports: [80, 443, 123]
+notes: >
+  Based on public documentation: the Hue bridge uses HTTPS to Signify
+  cloud hosts under meethue.com for remote control, app sync and firmware,
+  plus NTP. On the LAN it announces itself over mDNS (_hue._tcp) and
+  serves the local API on HTTP (80) and HTTPS (443). Lights talk Zigbee
+  to the bridge, so they are not separate IP devices. Vendor alone is
+  not used for a match, because other Signify products (for example WiZ)
+  use different clouds.

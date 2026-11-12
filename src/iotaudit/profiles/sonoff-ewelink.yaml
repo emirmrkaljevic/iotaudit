@@ -1,0 +1,14 @@
+id: sonoff-ewelink
+name: Sonoff / eWeLink smart switch
+match:
+  mac_vendors: ["Coolkit"]
+  domains: ["ewelink.cc", "coolkit.cc"]
+  hostnames: ["sonoff", "ewelink"]
+expected_domains: ["ewelink.cc", "coolkit.cc", "ntp.org"]
+expected_ports: [80, 443, 123]
+notes: >
+  Based on public documentation: Sonoff devices running eWeLink firmware
+  use HTTPS and WebSocket to ewelink.cc and coolkit.cc cloud hosts, plus
+  NTP. Some models offer a LAN mode announced over mDNS (_ewelink._tcp).
+  Espressif-only devices are not matched here, so a Tuya module is not
+  labelled as Sonoff.

@@ -1,0 +1,14 @@
+id: ring-doorbell
+name: Ring doorbell or camera
+match:
+  domains: ["ring.com"]
+expected_domains: ["ring.com", "amazonaws.com", "amazon.com", "ntp.org"]
+expected_ports: [443, 123]
+notes: >
+  Based on public documentation: Ring doorbells and cameras use HTTPS and
+  media streams to ring.com and Amazon hosts (amazonaws.com, amazon.com),
+  plus NTP for time sync. They do not expose RTSP or ONVIF on the LAN the
+  way many third-party cameras do. A destination outside Amazon and Ring
+  is flagged as unexpected. amazonaws.com is listed because media often
+  uses Amazon CDN or S3; the profile only attaches when ring.com is seen,
+  not for generic Amazon devices.

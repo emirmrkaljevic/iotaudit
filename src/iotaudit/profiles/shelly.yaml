@@ -1,0 +1,16 @@
+id: shelly
+name: Shelly Wi-Fi relay, plug or sensor
+match:
+  mac_vendors: ["Shelly"]
+  domains: ["shelly.cloud"]
+  hostnames: ["shelly"]
+expected_domains: ["shelly.cloud", "ntp.org"]
+expected_ports: [80, 443, 123, 1883, 8883]
+notes: >
+  Based on public documentation: stock Shelly firmware may connect to
+  Shelly Cloud over HTTPS or WebSocket (shelly.cloud). That can be
+  disabled. Local HTTP API on port 80, optional MQTT to your own broker,
+  and mDNS announcement are typical. NTP is used for time sync. With
+  cloud disabled, WAN destinations other than NTP are worth a closer
+  look. The default hostname usually starts with "shelly", so a device
+  can match this profile even when it does not talk to the cloud.

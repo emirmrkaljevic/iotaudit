@@ -9,7 +9,7 @@ Typical network behaviour of popular Wi-Fi relays and plugs, based on public doc
 - Sonoff (eWeLink firmware): HTTPS and WebSocket to ewelink.cc / coolkit.cc cloud servers. Some models offer a LAN mode announced over mDNS (_ewelink._tcp).
 - Both use NTP (123) for time sync.
 
-With cloud disabled, a Shelly should talk only to your LAN, NTP and your MQTT broker. Anything else is worth a closer look. iotaudit tags these as plug/bulb devices and flags unexpected destinations.
+With cloud disabled, a Shelly should talk only to your LAN, NTP and your MQTT broker. Anything else is worth a closer look. iotaudit includes bundled Shelly and Sonoff/eWeLink profiles (hostname, vendor, or cloud domain) and flags unexpected destinations.
 
 
 ## Check your own devices

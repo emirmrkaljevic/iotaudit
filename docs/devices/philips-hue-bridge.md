@@ -10,7 +10,7 @@ Typical network behaviour of a Hue bridge, based on public documentation:
 - On the LAN it announces itself over mDNS (_hue._tcp) and SSDP, and serves the local API on HTTP (80) and HTTPS (443).
 - The lights themselves talk Zigbee to the bridge, not Wi-Fi, so they do not show up as separate IP devices.
 
-A bridge talking to domains outside meethue.com, or opening new ports, is worth a closer look. iotaudit tags it as a hub/bridge from mDNS and DNS names and flags unexpected destinations.
+A bridge talking to domains outside meethue.com, or opening new ports, is worth a closer look. iotaudit includes a bundled Hue bridge profile (from meethue.com or a Hue-Bridge hostname) and flags unexpected destinations.
 
 
 ## Check your own devices
