@@ -441,10 +441,12 @@ def test_readme_and_changelog_document_diff():
     root = Path(__file__).resolve().parents[1]
     readme = (root / "README.md").read_text(encoding="utf-8")
     changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
-    assert "iotaudit diff" in readme and "--compare" in readme and "cron" in readme.lower()
+    usage = (root / "docs/usage.md").read_text(encoding="utf-8")
+    assert "iotaudit diff" in readme and "--compare" in readme
+    assert "iotaudit diff" in usage and "--compare" in usage and "cron" in usage.lower()
     from iotaudit import __version__
     assert __version__ in readme
-    quick = readme[readme.index("## Quick start"):readme.index("### macOS")]
+    quick = readme[readme.index("## Quick start"):]
     first_command = quick.split("```bash", 1)[1].split("```", 1)[0]
     assert first_command.strip() == "sudo iotaudit auto"
     assert "## [0.1.11]" in changelog and "iotaudit auto" in changelog
@@ -459,12 +461,20 @@ def test_readme_and_changelog_document_diff():
     assert f"## [{__version__}]" in changelog
     roadmap = (root / "ROADMAP.md").read_text(encoding="utf-8")
     auto_src = (root / "src/iotaudit/auto.py").read_text(encoding="utf-8")
+    docs_text = "".join(
+        (root / "docs" / name).read_text(encoding="utf-8")
+        for name in (
+            "usage.md", "modes.md", "mcp.md", "device-profiles.md",
+            "dns-bypass.md", "report.md", "index.md",
+        )
+    )
     for dash in _DASHES:
         assert dash not in readme
         assert dash not in changelog
         assert dash not in roadmap
         assert dash not in auto_src
         assert dash not in (root / "src/iotaudit/diff.py").read_text(encoding="utf-8")
+        assert dash not in docs_text
 
 
 def test_mcp_diff_results_matches_the_library():
