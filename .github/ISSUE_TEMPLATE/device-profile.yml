@@ -1,0 +1,42 @@
+name: Device profile
+description: Submit a device profile for a product you own
+title: "Profile: vendor model"
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping the profile library grow. Only submit a device you own.
+        Export a draft with `iotaudit profile export AUDIT.json DEVICE`, review it,
+        and paste the YAML below. Do not include IP addresses, MAC addresses,
+        hostnames, SSIDs, serials or paths.
+  - type: input
+    id: vendor
+    attributes:
+      label: Vendor
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model (if you know it)
+  - type: textarea
+    id: yaml
+    attributes:
+      label: Profile YAML
+      description: Paste the reviewed draft from `iotaudit profile export`.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Public source (optional)
+      description: A vendor document or other reputable page that lists these domains, if you have one.
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I own this device, the YAML has no local addresses, and I have reviewed the domains.
+          required: true

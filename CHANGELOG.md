@@ -3,6 +3,11 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.23] - 2026-11-14
+
+### Added
+- `iotaudit profile export AUDIT.json DEVICE` writes a draft device-profile YAML from a saved audit. It redacts the audit first (same as `iotaudit redact`) and keeps only vendor, model, public domains, destination ports and destination countries. Use it to submit a profile; see CONTRIBUTING.md and the Device profile issue template.
+
 ## [0.1.22] - 2026-11-12
 
 ### Added

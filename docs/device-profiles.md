@@ -29,7 +29,21 @@ Short public-documentation pages for typical destinations:
 
 The published versions of those pages live at [the docs site](https://emirmrkaljevic.github.io/iotaudit/).
 
-Current release is 0.1.22, which added the Ring, Hue, Shelly and Sonoff/eWeLink profiles and hostname matching.
+Current release is 0.1.23. 0.1.22 added the Ring, Hue, Shelly and Sonoff/eWeLink profiles and hostname matching.
+
+
+## Submit a profile
+
+You can turn a device from a saved audit into a draft profile, with local addresses already removed:
+
+```bash
+iotaudit profile export ~/iotaudit/2026-01-01/120000.json 1
+# or: iotaudit profile export audit.json "Example Vendor" --out draft.yaml
+```
+
+The command redacts the audit the same way `iotaudit redact` does, then writes YAML in the bundled format. The draft contains only the vendor, an optional model, public domains (collapsed to the registrable name, so `a2.tuyaeu.com` becomes `tuyaeu.com`), destination ports, and destination countries. Device hostnames are not included, even as placeholders such as `host-1`.
+
+Review the file before you share it. Drop any domain that is not this product's usual cloud, and add a model or a public source if you have one. Then open a GitHub issue with the Device profile template, or a pull request. The steps are also in [CONTRIBUTING.md](https://github.com/emirmrkaljevic/iotaudit/blob/main/CONTRIBUTING.md).
 
 ## Known-issue hints
 

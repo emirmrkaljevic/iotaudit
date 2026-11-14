@@ -465,6 +465,44 @@ def cmd_web(args) -> int:
     return 0
 
 
+def cmd_profile_export(args) -> int:
+    import json
+    from pathlib import Path
+
+    from .profile_export import export_profile
+
+    src = Path(args.audit).expanduser()
+    try:
+        data = json.loads(src.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        print(f"error: not a file: {src}", file=sys.stderr)
+        return 1
+    except (OSError, UnicodeError) as exc:
+        print(f"error: cannot read {src.name}: {exc}", file=sys.stderr)
+        return 1
+    except json.JSONDecodeError as exc:
+        print(
+            f"error: not JSON: {src.name}: line {exc.lineno} column {exc.colno}",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        yaml_text = export_profile(data, args.device)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    if args.out:
+        dest = Path(args.out).expanduser()
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(yaml_text, encoding="utf-8")
+        print(f"Draft profile written to {dest.resolve()}")
+    else:
+        if not yaml_text.endswith("\n"):
+            yaml_text += "\n"
+        sys.stdout.write(yaml_text)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="iotaudit", description="Audit your own smart-home devices.")
     p.add_argument("--version", action="version", version=__version__)
@@ -600,6 +638,23 @@ def build_parser() -> argparse.ArgumentParser:
 
     m = sub.add_parser("mcp", help="run the MCP server (stdio)")
     m.set_defaults(func=cmd_mcp)
+
+    prof = sub.add_parser("profile", help="work with device profiles")
+    prof_sub = prof.add_subparsers(dest="profile_cmd", required=True)
+    pe = prof_sub.add_parser(
+        "export",
+        help="write a shareable profile YAML from a saved audit",
+        description=(
+            "Turn one device in a saved JSON audit into a draft profile YAML. "
+            "Local IPs, MACs, hostnames, SSIDs and paths are removed first "
+            "with the same redaction as iotaudit redact. The draft keeps only "
+            "vendor, model, public domains, ports and destination countries."
+        ),
+    )
+    pe.add_argument("audit", metavar="AUDIT.json")
+    pe.add_argument("device", help="1-based index, vendor, or device IP")
+    pe.add_argument("--out", help="write YAML here (default: print to stdout)")
+    pe.set_defaults(func=cmd_profile_export)
     return p
 
 

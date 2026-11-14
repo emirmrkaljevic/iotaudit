@@ -164,3 +164,8 @@ iotaudit export ~/iotaudit/2026-01-01/120000.json --compare earlier.json --out i
 ```
 
 Each device gets `name`, `ip`, `grade`, `findings`, and `changed` (null on the first run). Ready-to-paste sensor YAML and MQTT details are in the [Home Assistant guide](home-assistant.md).
+
+## Device profiles
+
+`iotaudit profile export AUDIT.json DEVICE` writes a draft profile YAML from a saved audit, after the same redaction as `iotaudit redact`. Details and how to submit one are in [device profiles](device-profiles.md).
+
