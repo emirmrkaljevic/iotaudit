@@ -41,7 +41,7 @@ Live video from a camera or feeder often does **not** go to the cloud: it goes *
 
 > *Live video set up but not observed here*: the session was negotiated (STUN) but no sustained stream was captured; it most likely went straight to your phone. **Not observed ≠ not happening.**
 
-For ground truth, capture at the router instead. `--ipv6-ndp` (experimental) also NDP-spoofs IPv6 link-local pairs.
+For ground truth, capture at the router instead. A complete OpenWrt `tcpdump` walk-through is in the [OpenWrt guide](openwrt.md). `--ipv6-ndp` (experimental) also NDP-spoofs IPv6 link-local pairs.
 
 The report also distinguishes LAN peer (phone P2P) vs cloud vs STUN/TURN, and notes when a stream was set up but never actually passed through your computer.
 

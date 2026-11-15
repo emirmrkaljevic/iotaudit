@@ -36,6 +36,8 @@ Files land in `~/iotaudit/YYYY-MM-DD/` as HTML and JSON (and a PDF if that extra
 iotaudit analyze capture.pcap
 ```
 
+A step-by-step capture from an OpenWrt router (tcpdump over SSH, then `iotaudit analyze`) is in the [OpenWrt guide](docs/openwrt.md).
+
 Skip the typed confirmation with `--i-own-this-network` once you already know this is your network. To pull one device's traffic through this computer, use ARP or hotspot mode. See [capture modes](docs/modes.md).
 
 ## What it does

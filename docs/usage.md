@@ -68,6 +68,8 @@ iotaudit analyze capture.pcap --device 192.168.1.50 --json results.json --out re
 
 The report lands at `./iotaudit-report.html` with a matching `.json` next to it, unless you pass `--out` and `--json`.
 
+A full walk-through for a capture taken on an OpenWrt router is in the [OpenWrt guide](openwrt.md).
+
 ## PDF export
 
 ```bash

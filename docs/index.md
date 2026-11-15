@@ -19,6 +19,7 @@ Short pages on typical network behaviour of common consumer IoT devices, based o
 
 - [Usage](usage.html): install, `auto`, PDF, diff, cron, export, credcheck, UPnP, and the web UI
 - [Capture modes](modes.html): ARP, hotspot, IPv6, and P2P video
+- [OpenWrt router captures](openwrt.html): tcpdump over SSH, then `iotaudit analyze`
 - [Reports](report.html): sample report, PDF, sharing and redaction
 - [DNS that bypasses your resolver](dns-bypass.html)
 - [Device profiles and known-issue hints](device-profiles.html)

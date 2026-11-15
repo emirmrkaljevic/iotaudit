@@ -465,7 +465,7 @@ def test_readme_and_changelog_document_diff():
         (root / "docs" / name).read_text(encoding="utf-8")
         for name in (
             "usage.md", "modes.md", "mcp.md", "device-profiles.md",
-            "dns-bypass.md", "report.md", "index.md",
+            "dns-bypass.md", "report.md", "index.md", "openwrt.md",
         )
     )
     for dash in _DASHES:
