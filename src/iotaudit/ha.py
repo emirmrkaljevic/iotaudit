@@ -10,12 +10,74 @@ from __future__ import annotations
 import csv
 import io
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
 
 from .enrich import normalize_mac
 
 _GRADES = "ABCDEF"
+
+
+def worst_grade(devices: list[dict]) -> str | None:
+    """Worst letter grade in the list. A is best, F is worst."""
+    grades = [d.get("grade") for d in devices if d.get("grade") in _GRADES]
+    if not grades:
+        return None
+    return max(grades, key=_GRADES.index)
+
+
+def grade_worse_than(grade: str | None, threshold: str) -> bool:
+    """True when grade is worse than threshold. A is best, F is worst."""
+    if threshold not in _GRADES:
+        raise ValueError(f"unknown grade {threshold!r}; use one of A-F")
+    if grade is None or grade not in _GRADES:
+        return False
+    return _GRADES.index(grade) > _GRADES.index(threshold)
+
+
+def emit_summary_json(devices: list[dict], diff: dict | None = None, now: datetime | None = None) -> None:
+    """Write the compact grade summary to stdout."""
+    print(json.dumps(ha_summary(devices, diff, now=now), indent=2))
+
+
+def fail_under_exit(devices: list[dict], threshold: str | None) -> int:
+    """Return 1 when the worst grade is worse than threshold, else 0."""
+    if not threshold:
+        return 0
+    worst = worst_grade(devices)
+    if grade_worse_than(worst, threshold):
+        print(
+            f"error: worst grade {worst} is worse than --fail-under {threshold}",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
+def scripting_exit(
+    args,
+    devices: list[dict],
+    diff: dict | None = None,
+    other_rc: int = 0,
+    now: datetime | None = None,
+) -> int:
+    """Print --summary-json if asked, then combine --fail-under with another exit code.
+
+    A compare-input error (exit 2) is kept. Otherwise a failed grade check
+    or a non-zero other_rc becomes the exit code.
+    """
+    if getattr(args, "summary_json", False):
+        emit_summary_json(devices, diff, now=now)
+    fail_rc = fail_under_exit(devices, getattr(args, "fail_under", None))
+    if other_rc == 2:
+        return 2
+    return fail_rc or other_rc
+
+
+def human_stream(args):
+    """Stdout, or stderr when --summary-json is reserving stdout for JSON."""
+    return sys.stderr if getattr(args, "summary_json", False) else sys.stdout
 
 
 def _name(device: dict) -> str:
@@ -61,11 +123,10 @@ def ha_summary(devices: list[dict], diff: dict | None = None, now: datetime | No
             "status": status,
         })
     gone = [r for r in (diff or {}).get("devices") or [] if r.get("status") == "gone"]
-    grades = [r["grade"] for r in rows if r["grade"] in _GRADES]
     return {
         "generated": (now or datetime.now()).isoformat(timespec="seconds"),
         "devices": len(rows),
-        "worst_grade": max(grades, key=_GRADES.index) if grades else None,
+        "worst_grade": worst_grade(rows),
         "findings": sum(r["findings"] for r in rows),
         "changed": sum(1 for r in rows if r["changed"]) + len(gone),
         "gone": len(gone),

@@ -504,34 +504,37 @@ def run_auto(
     html = render_html(devices, meta)
     html_path.write_text(html, encoding="utf-8")
 
+    from .ha import human_stream, scripting_exit
+
+    human = human_stream(args)
     for device in devices:
-        print(summary_line(device))
-    print(f"Report written to {html_path.resolve()}")
-    print(f"JSON written to {json_path.resolve()}")
+        print(summary_line(device), file=human)
+    print(f"Report written to {html_path.resolve()}", file=human)
+    print(f"JSON written to {json_path.resolve()}", file=human)
     pdf_path = html_path.with_suffix(".pdf")
     if _write_pdf(html, pdf_path):
-        print(f"PDF written to {pdf_path.resolve()}")
+        print(f"PDF written to {pdf_path.resolve()}", file=human)
 
     if previous_path is None:
         print("No earlier audit in this folder. Nothing to compare.", file=sys.stderr)
-        return _write_ha(args, devices, None, when)
+        mqtt_rc = _write_ha(args, devices, None, when)
+        return scripting_exit(args, devices, None, mqtt_rc, now=when)
     try:
         previous = load_audit(previous_path)
     except (OSError, UnicodeError, ValueError) as exc:
         print(f"error: --compare: {exc}", file=sys.stderr)
-        return 2
+        return scripting_exit(args, devices, None, 2, now=when)
     result = diff_audits(
         previous,
         audit_from_devices(devices),
         old_label=str(previous_path),
         new_label=str(json_path),
     )
-    print()
-    print(format_diff(result), end="")
+    print(file=human)
+    print(format_diff(result), end="", file=human)
     mqtt_rc = _write_ha(args, devices, result, when)
-    if result["security_relevant"]:
-        return 1
-    return mqtt_rc
+    rc = 1 if result["security_relevant"] else mqtt_rc
+    return scripting_exit(args, devices, result, rc, now=when)
 
 
 def _write_ha(args, devices: list[dict], diff: dict | None, when: datetime) -> int:

@@ -3,6 +3,11 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.24] - 2026-11-16
+
+### Added
+- `--summary-json` on `iotaudit auto`, `capture` and `analyze` prints a compact grade summary as JSON on stdout (the same shape as `iotaudit export`). Human status lines go to stderr so a script can pipe the JSON. `--fail-under B` exits 1 when the worst device grade is worse than B (A is best). `iotaudit export` accepts `--fail-under` too.
+
 ## [0.1.23] - 2026-11-14
 
 ### Added

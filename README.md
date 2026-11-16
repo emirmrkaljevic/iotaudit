@@ -49,10 +49,11 @@ Skip the typed confirmation with `--i-own-this-network` once you already know th
 - Offline known-issue hints when a banner matches a curated CVE. A hint changes the grade only in a narrow case; details are in [device profiles](docs/device-profiles.md).
 - Turn a saved audit into a shareable profile draft with `iotaudit profile export` (see [device profiles](docs/device-profiles.md)).
 - `iotaudit diff` (and `--compare`) to see what changed since the last audit.
+- For scripts, `--summary-json` prints a compact grade summary on stdout, and `--fail-under B` exits 1 when the worst grade is worse than B.
 - HTML and PDF reports, CSV or Markdown export, and `--redact` when you want to share a report without local addresses.
 - Grades can go into Home Assistant over MQTT (`--ha-mqtt`, with discovery so sensors appear without YAML) or as a JSON file (`--ha-json`). See the [Home Assistant guide](https://emirmrkaljevic.github.io/iotaudit/home-assistant.html).
 
-Current release is **0.1.23**. A [sample report](docs/sample-report.html) and a short demo are on the [report page](docs/report.md). A full vulnerability feed is still on the [roadmap](ROADMAP.md).
+Current release is **0.1.24**. A [sample report](docs/sample-report.html) and a short demo are on the [report page](docs/report.md). A full vulnerability feed is still on the [roadmap](ROADMAP.md).
 
 ![iotaudit auto demo (sample data)](docs/auto-demo.svg)
 

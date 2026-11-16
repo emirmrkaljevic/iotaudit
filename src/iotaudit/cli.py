@@ -55,30 +55,34 @@ def _finish(col, args, meta) -> int:
     out = Path(args.out)
     html = render_html(devices, meta)
     out.write_text(html, encoding="utf-8")
+    from .ha import human_stream, scripting_exit
+
+    human = human_stream(args)
     for d in devices:
         head = d.get("verdict") or f"grade {d['grade']}"
         hints = d.get("known_issue_hints") or []
         hint_note = f", {len(hints)} known-issue hint(s)" if hints else ""
         print(f"{d['ip']:<16} {head}  ({len(d['destinations'])} destinations, "
-              f"{len(d['findings'])} findings{hint_note})")
-    print(f"Report written to {out.resolve()}")
-    print(f"JSON written to {Path(json_path).resolve()}")
+              f"{len(d['findings'])} findings{hint_note})", file=human)
+    print(f"Report written to {out.resolve()}", file=human)
+    print(f"JSON written to {Path(json_path).resolve()}", file=human)
     if getattr(args, "pdf", False):
         pdf_path = out.with_suffix(".pdf")
         if _emit_pdf(html, pdf_path):
-            print(f"PDF written to {pdf_path.resolve()}")
+            print(f"PDF written to {pdf_path.resolve()}", file=human)
     if compare_error is not None:
         print(f"error: --compare: {compare_error}", file=sys.stderr)
-        return 2
+        return scripting_exit(args, devices, None, 2)
     if previous is not None:
         result = diff_audits(
             previous, audit_from_devices(devices),
             old_label=str(compare), new_label=str(json_path),
         )
-        print()
-        print(format_diff(result), end="")
-        return 1 if result["security_relevant"] else 0
-    return 0
+        print(file=human)
+        print(format_diff(result), end="", file=human)
+        rc = 1 if result["security_relevant"] else 0
+        return scripting_exit(args, devices, result, rc)
+    return scripting_exit(args, devices, None, 0)
 
 
 def _emit_pdf(html: str, pdf_path: Path) -> bool:
@@ -214,7 +218,9 @@ def cmd_export(args) -> int:
         print(f"Home Assistant summary written to {dest.resolve()}")
     elif not getattr(args, "ha_mqtt", None):
         print(json.dumps(summary, indent=2))
-    return publish_ha_mqtt(summary, args)
+    from .ha import fail_under_exit
+    mqtt_rc = publish_ha_mqtt(summary, args)
+    return fail_under_exit(new.devices, getattr(args, "fail_under", None)) or mqtt_rc
 
 
 def cmd_auto(args) -> int:
@@ -503,6 +509,22 @@ def cmd_profile_export(args) -> int:
     return 0
 
 
+def _add_scripting_flags(sp, *, summary_json: bool = True) -> None:
+    """Flags for scripts: compact JSON on stdout, and a grade exit code."""
+    if summary_json:
+        sp.add_argument(
+            "--summary-json",
+            action="store_true",
+            help="print a compact grade summary as JSON on stdout",
+        )
+    sp.add_argument(
+        "--fail-under",
+        metavar="GRADE",
+        choices=list("ABCDEF"),
+        help="exit 1 if the worst device grade is worse than this (A is best)",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="iotaudit", description="Audit your own smart-home devices.")
     p.add_argument("--version", action="version", version=__version__)
@@ -529,6 +551,7 @@ def build_parser() -> argparse.ArgumentParser:
     auto.add_argument("--ha-json", metavar="PATH",
                       help="also write a compact summary for a Home Assistant sensor")
     add_ha_mqtt_args(auto)
+    _add_scripting_flags(auto)
     auto.set_defaults(func=cmd_auto)
 
     def common(sp):
@@ -546,6 +569,7 @@ def build_parser() -> argparse.ArgumentParser:
                              "default on for capture, off for analyze)")
         sp.add_argument("--compare", metavar="PREV.json",
                         help="after the report, diff it against this earlier JSON audit")
+        _add_scripting_flags(sp)
 
     c = sub.add_parser("capture", help="live capture (hotspot recommended)")
     c.add_argument("--mode", choices=["hotspot", "iface", "arp"], default="hotspot",
@@ -590,6 +614,7 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("--redact", action="store_true",
                    help="leave out IP addresses, for posting the summary publicly")
     add_ha_mqtt_args(e)
+    _add_scripting_flags(e, summary_json=False)
     e.set_defaults(func=cmd_export)
 
     rd = sub.add_parser("redact", help="copy a saved JSON audit without local IPs, MACs and hostnames")

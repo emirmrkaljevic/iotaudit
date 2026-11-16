@@ -106,6 +106,13 @@ Exit code **1** when something security-relevant appeared: a device, a destinati
 
 `capture` and `analyze` already write JSON (next to the HTML, or at `--json`). Keep the previous file and pass it as `--compare`, or run `diff` on the two files later. `--json` on `diff` prints the machine-readable result. On `capture` and `analyze`, `--json` is still the path of the results file.
 
+`--summary-json` on `auto`, `capture` and `analyze` prints the compact grade summary (the same JSON as `iotaudit export`) on stdout, so a script can read it without a second command. Human status lines then go to stderr, so the JSON stays clean to pipe. `--fail-under B` exits 1 when the worst device grade is worse than B (A is best, F is worst). A grade that equals the threshold still passes. `export` accepts `--fail-under` too.
+
+```bash
+iotaudit analyze capture.pcap --no-scan --summary-json --fail-under B > summary.json
+```
+
+
 Cron stays quiet when nothing new showed up. This script prints the diff, and exits 1, only when something security-relevant appeared:
 
 ```sh
