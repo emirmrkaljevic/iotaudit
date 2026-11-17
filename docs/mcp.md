@@ -22,3 +22,8 @@ I also list the server on [mcpservers.org](https://mcpservers.org/servers/emirmr
 - `upnp_port_mappings`: lists the port forwards the LAN router opened via UPnP IGD. Read-only: it never adds or removes a mapping.
 
 Consent is the same as the command line: the live tools refuse to run until ownership is confirmed. Only audit networks and devices you own. All data stays local, no telemetry.
+
+## Docker
+
+A `Dockerfile` at the repository root installs `iotaudit[mcp]` and starts `iotaudit-mcp` on stdio. The container does not need root, nmap or tcpdump: the server starts and lists tools without capture privileges.
+
