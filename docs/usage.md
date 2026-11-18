@@ -18,6 +18,16 @@ pipx install "git+https://github.com/emirmrkaljevic/iotaudit"
 
 Capturing needs root (`sudo`). The optional port scan needs `nmap`.
 
+## Country database
+
+Reports name destination countries using a DB-IP Lite database that ships with the package. To install a newer monthly file without waiting for a new iotaudit release:
+
+```bash
+iotaudit geoip update
+```
+
+The file is written to `~/iotaudit/dbip-country-lite.mmdb` and later reports use it automatically. `iotaudit geoip` shows which file is in use. Attribution: IP Geolocation by [DB-IP](https://db-ip.com).
+
 ## The one-command audit
 
 One command does the audit. It asks you to confirm this is your network, picks the active interface, finds devices, identifies them, scans ports, lists UPnP forwards (read-only), captures passively for 60 seconds, and writes the report.

@@ -34,7 +34,7 @@ Done in the first commit:
 Remaining for v0.1.0:
 - [ ] Real-device validation (Tuya-based pet feeder first) and profile tuning
 - [ ] Hotspot capture hardening (auto-detect Wi-Fi interface, client list, IPv6)
-- [ ] Bundled download helper for the free country database
+- [x] Bundled DB-IP Lite country database, plus `iotaudit geoip update` to fetch a newer monthly file (0.1.25)
 - [x] Report polish: per-device plain-English summary paragraph, destination country summary
   (0.1.5 also shows video / audio / telemetry / unknown as indicators with confidence)
 - [ ] PyPI release, MCP registry listing

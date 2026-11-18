@@ -3,6 +3,11 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.25] - 2026-11-18
+
+### Added
+- `iotaudit geoip` shows which country database is in use. `iotaudit geoip update` downloads the latest monthly DB-IP Lite file from db-ip.com into `~/iotaudit`, so reports can pick up new country data without waiting for a new iotaudit release. A copy already ships with the package; the downloaded file is preferred when present.
+
 ## [0.1.24] - 2026-11-16
 
 ### Added

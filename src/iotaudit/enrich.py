@@ -148,20 +148,25 @@ def mac_vendor(mac: str | None) -> str | None:
 
 
 def _bundled_mmdb() -> str | None:
-    try:
-        from importlib import resources
-        p = resources.files("iotaudit") / "data" / "dbip-country-lite.mmdb"
-        return str(p) if p.is_file() else None
-    except (FileNotFoundError, ModuleNotFoundError, TypeError, AttributeError):
-        return None
+    from .geoip import bundled_mmdb
+
+    path = bundled_mmdb()
+    return str(path) if path is not None else None
 
 
 class Geo:
-    """Country lookup. Uses --geoip / IOTAUDIT_GEOIP, else the bundled DB-IP Lite country DB."""
+    """Country lookup.
+
+    Uses --geoip / IOTAUDIT_GEOIP, a downloaded file in ~/iotaudit, or the
+    bundled DB-IP Lite country DB.
+    """
 
     def __init__(self, path: str | None = None):
         self.reader = None
-        path = path or os.environ.get("IOTAUDIT_GEOIP") or _bundled_mmdb()
+        from .geoip import resolved_mmdb
+
+        resolved = resolved_mmdb(path)
+        path = str(resolved) if resolved is not None else None
         if path and os.path.exists(path):
             try:
                 import maxminddb

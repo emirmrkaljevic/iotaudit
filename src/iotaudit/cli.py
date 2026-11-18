@@ -509,6 +509,39 @@ def cmd_profile_export(args) -> int:
     return 0
 
 
+def cmd_geoip(args) -> int:
+    from .geoip import (
+        database_label,
+        resolved_mmdb,
+        source_kind,
+        update_mmdb,
+        user_mmdb_path,
+    )
+
+    if getattr(args, "geoip_cmd", None) == "update":
+        dest = Path(args.out).expanduser() if args.out else user_mmdb_path()
+        try:
+            path, stamp = update_mmdb(dest)
+        except (OSError, RuntimeError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(f"Downloaded DB-IP country lite ({stamp}) to {path.resolve()}")
+        print("Country lookups will use this file automatically.")
+        return 0
+
+    path = resolved_mmdb(None)
+    if path is None:
+        print("No country database found. Run: iotaudit geoip update")
+        return 1
+    kind = source_kind(path)
+    label = database_label(path)
+    extra = f" ({label})" if label else ""
+    print(f"Using {path} [{kind}]{extra}")
+    if kind == "bundled":
+        print("A newer monthly file can be installed with: iotaudit geoip update")
+    return 0
+
+
 def _add_scripting_flags(sp, *, summary_json: bool = True) -> None:
     """Flags for scripts: compact JSON on stdout, and a grade exit code."""
     if summary_json:
@@ -680,6 +713,26 @@ def build_parser() -> argparse.ArgumentParser:
     pe.add_argument("device", help="1-based index, vendor, or device IP")
     pe.add_argument("--out", help="write YAML here (default: print to stdout)")
     pe.set_defaults(func=cmd_profile_export)
+
+    geo = sub.add_parser(
+        "geoip",
+        help="show or update the country database used in reports",
+        description=(
+            "iotaudit ships a DB-IP Lite country database so reports can name "
+            "destination countries. iotaudit geoip shows which file is in use. "
+            "iotaudit geoip update downloads the latest monthly lite file from "
+            "db-ip.com into ~/iotaudit, and later lookups use it automatically. "
+            "Attribution: IP Geolocation by DB-IP (https://db-ip.com)."
+        ),
+    )
+    geo_sub = geo.add_subparsers(dest="geoip_cmd")
+    geo.set_defaults(func=cmd_geoip, geoip_cmd=None)
+    geo_sub.add_parser("status", help="show which country database is in use").set_defaults(
+        func=cmd_geoip, geoip_cmd="status"
+    )
+    gu = geo_sub.add_parser("update", help="download the latest free DB-IP country lite file")
+    gu.add_argument("--out", help="write the .mmdb here (default: ~/iotaudit/dbip-country-lite.mmdb)")
+    gu.set_defaults(func=cmd_geoip, geoip_cmd="update")
     return p
 
 

@@ -21,6 +21,7 @@ pipx install iotaudit
 ```
 
 Capturing traffic needs root (`sudo`). An optional port scan needs `nmap`. PDF export and the MCP server are extras: `pip install "iotaudit[pdf]"` and `pip install "iotaudit[mcp]"`. More install notes, including how to get `iotaudit` onto macOS sudo's PATH, are in the [usage guide](docs/usage.md).
+Country lookups use a bundled DB-IP Lite database; `iotaudit geoip update` installs a newer monthly file.
 
 ## Quick start
 
@@ -53,7 +54,7 @@ Skip the typed confirmation with `--i-own-this-network` once you already know th
 - HTML and PDF reports, CSV or Markdown export, and `--redact` when you want to share a report without local addresses.
 - Grades can go into Home Assistant over MQTT (`--ha-mqtt`, with discovery so sensors appear without YAML) or as a JSON file (`--ha-json`). See the [Home Assistant guide](https://emirmrkaljevic.github.io/iotaudit/home-assistant.html).
 
-Current release is **0.1.24**. A [sample report](docs/sample-report.html) and a short demo are on the [report page](docs/report.md). A full vulnerability feed is still on the [roadmap](ROADMAP.md).
+Current release is **0.1.25**. A [sample report](docs/sample-report.html) and a short demo are on the [report page](docs/report.md). A full vulnerability feed is still on the [roadmap](ROADMAP.md).
 
 ![iotaudit auto demo (sample data)](docs/auto-demo.svg)
 

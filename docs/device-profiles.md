@@ -29,7 +29,7 @@ Short public-documentation pages for typical destinations:
 
 The published versions of those pages live at [the docs site](https://emirmrkaljevic.github.io/iotaudit/).
 
-Current release is 0.1.24. 0.1.22 added the Ring, Hue, Shelly and Sonoff/eWeLink profiles and hostname matching.
+Current release is 0.1.25. 0.1.22 added the Ring, Hue, Shelly and Sonoff/eWeLink profiles and hostname matching.
 
 
 ## Submit a profile
