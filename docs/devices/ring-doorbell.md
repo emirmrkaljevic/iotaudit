@@ -3,6 +3,8 @@ title: "What does a Ring doorbell or camera send?"
 ---
 # What does a Ring doorbell or camera send?
 
+For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
+
 Typical network behaviour of Ring doorbells and cameras, based on public documentation:
 
 - HTTPS (443) and media streams to Amazon / Ring cloud hosts under ring.com, amazonaws.com and amazon.com.
@@ -24,4 +26,4 @@ sudo iotaudit auto
 
 Full install instructions: [README](https://github.com/emirmrkaljevic/iotaudit#readme). Only audit networks and devices you own. All data stays local, no telemetry.
 
-[All device pages](../)
+[All device pages](README.md)

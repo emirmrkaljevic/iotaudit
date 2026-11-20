@@ -3,6 +3,8 @@ title: "What does a Chromecast or Google Cast device send?"
 ---
 # What does a Chromecast or Google Cast device send?
 
+For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
+
 Typical network behaviour of Chromecast and other Google Cast devices, based on public documentation:
 
 - HTTPS (443) and QUIC (UDP 443) to Google services: google.com, googleapis.com, gstatic.com, googlevideo.com and similar.
@@ -24,4 +26,4 @@ sudo iotaudit auto
 
 Full install instructions: [README](https://github.com/emirmrkaljevic/iotaudit#readme). Only audit networks and devices you own. All data stays local, no telemetry.
 
-[All device pages](../)
+[All device pages](README.md)

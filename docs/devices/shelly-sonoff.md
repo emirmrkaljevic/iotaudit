@@ -3,6 +3,8 @@ title: "What does a Shelly or Sonoff smart switch send?"
 ---
 # What does a Shelly or Sonoff smart switch send?
 
+For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
+
 Typical network behaviour of popular Wi-Fi relays and plugs, based on public documentation:
 
 - Shelly: optional Shelly Cloud connection over HTTPS/WebSocket to shelly.cloud endpoints, which can be disabled. Local HTTP API on port 80, optional MQTT to your own broker, mDNS announcement (_shelly._tcp or _http._tcp).
@@ -23,4 +25,4 @@ sudo iotaudit auto
 
 Full install instructions: [README](https://github.com/emirmrkaljevic/iotaudit#readme). Only audit networks and devices you own. All data stays local, no telemetry.
 
-[All device pages](../)
+[All device pages](README.md)

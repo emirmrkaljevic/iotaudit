@@ -3,6 +3,8 @@ title: "What does an IP camera (Hikvision, Dahua, Amcrest) send?"
 ---
 # What does an IP camera (Hikvision, Dahua, Amcrest) send?
 
+For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
+
 Typical traffic for consumer IP cameras:
 
 - Cloud and P2P relay for remote viewing: hik-connect.com, easy4ip.com, amcrestcloud.com.
@@ -23,4 +25,4 @@ sudo iotaudit auto
 
 Full install instructions: [README](https://github.com/emirmrkaljevic/iotaudit#readme). Only audit networks and devices you own. All data stays local, no telemetry.
 
-[All device pages](../)
+[All device pages](README.md)

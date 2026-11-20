@@ -3,7 +3,7 @@ title: Reports, PDF, and sharing
 ---
 # Reports, PDF, and sharing
 
-Each audit writes a one-page HTML report with an A-F grade and a one-line safety verdict per device. A matching JSON file is saved next to it. A PDF is written when the `iotaudit[pdf]` extra is installed, or when you pass `--pdf`.
+Each audit writes a one-page HTML report with an A-F grade and a one-line safety verdict per device. A matching JSON file is saved next to it. A PDF is written when the `iotaudit[pdf]` extra is installed, or when you pass `--pdf`. For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
 
 ## Sample report
 
@@ -11,7 +11,7 @@ A report for a Tuya-associated pet feeder (anonymized). The one-line verdict sit
 
 ![Sample iotaudit report](sample-report.png)
 
-Open [sample-report.html](sample-report.html) in a browser for the full version.
+Open [sample-report.html](examples/sample-report.html) in a browser for the full version.
 
 ## Demo
 

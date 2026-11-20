@@ -37,7 +37,7 @@ Files land in `~/iotaudit/YYYY-MM-DD/` as HTML and JSON (and a PDF if that extra
 iotaudit analyze capture.pcap
 ```
 
-A step-by-step capture from an OpenWrt router (tcpdump over SSH, then `iotaudit analyze`) is in the [OpenWrt guide](docs/openwrt.md).
+A step-by-step capture from an OpenWrt router (tcpdump over SSH, then `iotaudit analyze`) is in the [OpenWrt guide](docs/integrations/openwrt.md).
 
 Skip the typed confirmation with `--i-own-this-network` once you already know this is your network. To pull one device's traffic through this computer, use ARP or hotspot mode. See [capture modes](docs/modes.md).
 
@@ -52,9 +52,9 @@ Skip the typed confirmation with `--i-own-this-network` once you already know th
 - `iotaudit diff` (and `--compare`) to see what changed since the last audit.
 - For scripts, `--summary-json` prints a compact grade summary on stdout, and `--fail-under B` exits 1 when the worst grade is worse than B.
 - HTML and PDF reports, CSV or Markdown export, and `--redact` when you want to share a report without local addresses.
-- Grades can go into Home Assistant over MQTT (`--ha-mqtt`, with discovery so sensors appear without YAML) or as a JSON file (`--ha-json`). See the [Home Assistant guide](https://emirmrkaljevic.github.io/iotaudit/home-assistant.html).
+- Grades can go into Home Assistant over MQTT (`--ha-mqtt`, with discovery so sensors appear without YAML) or as a JSON file (`--ha-json`). See the [Home Assistant guide](docs/integrations/home-assistant.md).
 
-Current release is **0.1.25**. A [sample report](docs/sample-report.html) and a short demo are on the [report page](docs/report.md). A full vulnerability feed is still on the [roadmap](ROADMAP.md).
+Current release is **0.1.25**. A [sample report](docs/examples/sample-report.html) and a short demo are on the [report page](docs/report.md). A full vulnerability feed is still on the [roadmap](ROADMAP.md).
 
 ![iotaudit auto demo (sample data)](docs/auto-demo.svg)
 
@@ -78,10 +78,13 @@ Findings are indicators based on observed traffic, not proof of wrongdoing by an
 - [Usage](docs/usage.md): install, `auto`, PDF, `diff`, cron, export, credcheck, UPnP, and the web UI
 - [Capture modes](docs/modes.md): ARP, hotspot, IPv6, and P2P video
 - [Reports](docs/report.md): sample report, PDF, sharing and redaction
-- [DNS that bypasses your resolver](docs/dns-bypass.md)
-- [Device profiles and known-issue hints](docs/device-profiles.md)
-- [Home Assistant](https://emirmrkaljevic.github.io/iotaudit/home-assistant.html)
-- [Web UI and phones](docs/phones.md)
-- [Share results](https://emirmrkaljevic.github.io/iotaudit/share-results.html)
-- [What common devices send](https://emirmrkaljevic.github.io/iotaudit/)
+- [DNS that bypasses your resolver](docs/dns-bypass.md): hardcoded DNS, DNS-over-TLS, and DNS-over-HTTPS
+- [Device profiles and known-issue hints](docs/device-profiles.md): how a device is recognised and when a CVE hint changes the grade
+- [MCP server](docs/mcp.md): local stdio tools for the same audits
+- [Share results](docs/share-results.md): redact local addresses before you post a report
+- [Home Assistant](docs/integrations/home-assistant.md): MQTT or JSON grades in Home Assistant
+- [OpenWrt router captures](docs/integrations/openwrt.md): tcpdump on the router, then `iotaudit analyze`
+- [Web UI and phones](docs/integrations/phones.md): Android, iPhone, and `iotaudit web`
+- [Device pages](docs/devices/): typical traffic for common smart-home devices
+- [Sample report](docs/examples/sample-report.html): an anonymized HTML report with an A to F grade
 - [Changelog](CHANGELOG.md) and [roadmap](ROADMAP.md)

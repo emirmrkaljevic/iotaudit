@@ -3,6 +3,8 @@ title: "What does a Philips Hue bridge send?"
 ---
 # What does a Philips Hue bridge send?
 
+For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
+
 Typical network behaviour of a Hue bridge, based on public documentation:
 
 - HTTPS (443) to Signify cloud endpoints under meethue.com for remote control, app sync and firmware updates.
@@ -24,4 +26,4 @@ sudo iotaudit auto
 
 Full install instructions: [README](https://github.com/emirmrkaljevic/iotaudit#readme). Only audit networks and devices you own. All data stays local, no telemetry.
 
-[All device pages](../)
+[All device pages](README.md)

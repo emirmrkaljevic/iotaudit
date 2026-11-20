@@ -3,7 +3,7 @@ title: Capture modes
 ---
 # Capture modes
 
-`iotaudit auto` records traffic that already passes this computer. It does not ARP-spoof and does not start a hotspot. To pull one device's traffic through this machine, use `iotaudit capture`.
+`iotaudit auto` records traffic that already passes this computer. It does not ARP-spoof and does not start a hotspot. To pull one device's traffic through this machine, use `iotaudit capture`. For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
 
 ## macOS (ARP)
 
@@ -30,7 +30,7 @@ sudo "$(which iotaudit)" capture --mode arp --i-own-this-network
 
 # Or hotspot mode: your laptop becomes an AP; re-pair the device to it (needs NetworkManager).
 sudo iotaudit capture --mode hotspot --iface wlan0 --ssid iotaudit --password 'choose-a-pass' \
-     --device 10.42.0.50 --scan --out feeder.html
+     --device 192.0.2.50 --scan --out feeder.html
 ```
 
 Hotspot mode is useful when you cannot (or would rather not) ARP-spoof on the main LAN, or when client isolation would hide the device from this computer.
@@ -41,8 +41,8 @@ Live video from a camera or feeder often does **not** go to the cloud: it goes *
 
 > *Live video set up but not observed here*: the session was negotiated (STUN) but no sustained stream was captured; it most likely went straight to your phone. **Not observed ≠ not happening.**
 
-For ground truth, capture at the router instead. A complete OpenWrt `tcpdump` walk-through is in the [OpenWrt guide](openwrt.md). `--ipv6-ndp` (experimental) also NDP-spoofs IPv6 link-local pairs.
+For ground truth, capture at the router instead. A complete OpenWrt `tcpdump` walk-through is in the [OpenWrt guide](integrations/openwrt.md). `--ipv6-ndp` (experimental) also NDP-spoofs IPv6 link-local pairs.
 
 The report also distinguishes LAN peer (phone P2P) vs cloud vs STUN/TURN, and notes when a stream was set up but never actually passed through your computer.
 
-You can also analyse a capture you already have (`iotaudit analyze capture.pcap`). Details are in the [usage guide](usage.md). What phones can and cannot do is in [phones](phones.md).
+You can also analyse a capture you already have (`iotaudit analyze capture.pcap`). Details are in the [usage guide](usage.md). What phones can and cannot do is in [phones](integrations/phones.md).

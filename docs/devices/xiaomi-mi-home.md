@@ -3,6 +3,8 @@ title: "What does a Xiaomi Mi Home device send?"
 ---
 # What does a Xiaomi Mi Home device send?
 
+For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
+
 Xiaomi miIO devices (plugs, purifiers, vacuums):
 
 - Encrypted UDP to ot.io.mi.com on port 8053.
@@ -24,4 +26,4 @@ sudo iotaudit auto
 
 Full install instructions: [README](https://github.com/emirmrkaljevic/iotaudit#readme). Only audit networks and devices you own. All data stays local, no telemetry.
 
-[All device pages](../)
+[All device pages](README.md)

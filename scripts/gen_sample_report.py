@@ -1,6 +1,6 @@
 """Generate an anonymized sample HTML report from synthetic feeder-like data that also
 exercises IPv6/NDP, the special-use bogon peer, and the honest 'media not observed'
-note. Used for docs/sample-report.html. No real personal data."""
+note. Used for docs/examples/sample-report.html. No real personal data."""
 
 from __future__ import annotations
 
@@ -71,7 +71,7 @@ def main() -> None:
                     "why": "Telnet exposes an unencrypted login shell."}]}
     devs = [to_dict(d) for d in build_devices(collector(), scans=scans)]
     html = render_html(devs, {"source": "arp:en0 (anonymized sample)", "duration": 900})
-    out = Path(__file__).resolve().parents[1] / "docs" / "sample-report.html"
+    out = Path(__file__).resolve().parents[1] / "docs" / "examples" / "sample-report.html"
     out.write_text(html, encoding="utf-8")
     print("wrote", out)
     print("findings:", [f["title"] for f in devs[0]["findings"]])

@@ -462,11 +462,8 @@ def test_readme_and_changelog_document_diff():
     roadmap = (root / "ROADMAP.md").read_text(encoding="utf-8")
     auto_src = (root / "src/iotaudit/auto.py").read_text(encoding="utf-8")
     docs_text = "".join(
-        (root / "docs" / name).read_text(encoding="utf-8")
-        for name in (
-            "usage.md", "modes.md", "mcp.md", "device-profiles.md",
-            "dns-bypass.md", "report.md", "index.md", "openwrt.md",
-        )
+        path.read_text(encoding="utf-8")
+        for path in sorted((root / "docs").rglob("*.md"))
     )
     for dash in _DASHES:
         assert dash not in readme

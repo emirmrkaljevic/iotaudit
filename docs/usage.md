@@ -3,7 +3,7 @@ title: Using iotaudit
 ---
 # Using iotaudit
 
-Install, the one-command audit, reports, diffs, and the smaller commands. For ARP and hotspot capture, see [capture modes](modes.md). For Home Assistant, see the [Home Assistant guide](home-assistant.md).
+Install, the one-command audit, reports, diffs, and the smaller commands. For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme). For ARP and hotspot capture, see [capture modes](modes.md). For Home Assistant, see the [Home Assistant guide](integrations/home-assistant.md).
 
 ## Install
 
@@ -78,7 +78,7 @@ iotaudit analyze capture.pcap --device 192.168.1.50 --json results.json --out re
 
 The report lands at `./iotaudit-report.html` with a matching `.json` next to it, unless you pass `--out` and `--json`.
 
-A full walk-through for a capture taken on an OpenWrt router is in the [OpenWrt guide](openwrt.md).
+A full walk-through for a capture taken on an OpenWrt router is in the [OpenWrt guide](integrations/openwrt.md).
 
 ## PDF export
 
@@ -161,7 +161,7 @@ iotaudit web                          # http://127.0.0.1:8765, token printed on 
 sudo "$(which iotaudit)" web --lan    # also from a phone on the same Wi-Fi (token required)
 ```
 
-View reports, upload a pcap (including PCAPdroid captures from Android) and run a one-click scan and capture from the browser. Localhost by default; `--lan` is opt-in, token-protected and only answers private-range clients. iPhones can use the web UI but cannot capture on their own; see [phones](phones.md) for what works on Android and iOS and what does not.
+View reports, upload a pcap (including PCAPdroid captures from Android) and run a one-click scan and capture from the browser. Localhost by default; `--lan` is opt-in, token-protected and only answers private-range clients. iPhones can use the web UI but cannot capture on their own; see [phones](integrations/phones.md) for what works on Android and iOS and what does not.
 
 ## Export, Home Assistant, and sharing
 
@@ -182,7 +182,7 @@ sudo iotaudit auto --ha-json /path/to/homeassistant/config/iotaudit.json
 iotaudit export ~/iotaudit/2026-01-01/120000.json --compare earlier.json --out iotaudit.json
 ```
 
-Each device gets `name`, `ip`, `grade`, `findings`, and `changed` (null on the first run). Ready-to-paste sensor YAML and MQTT details are in the [Home Assistant guide](home-assistant.md).
+Each device gets `name`, `ip`, `grade`, `findings`, and `changed` (null on the first run). Ready-to-paste sensor YAML and MQTT details are in the [Home Assistant guide](integrations/home-assistant.md).
 
 ## Device profiles
 

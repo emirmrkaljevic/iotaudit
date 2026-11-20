@@ -3,6 +3,8 @@ title: "What does a Wi-Fi pet feeder send?"
 ---
 # What does a Wi-Fi pet feeder send?
 
+For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
+
 Many Wi-Fi feeders (for example IMIPAW models using the PETTECH app) are built on Tuya Wi-Fi/BT modules. Expect:
 
 - HTTPS (443) and MQTT over TLS (8883) to the Tuya region cloud (tuyaeu.com, tuyaus.com, tuyacn.com) and smart321.com.
@@ -23,4 +25,4 @@ sudo iotaudit auto
 
 Full install instructions: [README](https://github.com/emirmrkaljevic/iotaudit#readme). Only audit networks and devices you own. All data stays local, no telemetry.
 
-[All device pages](../)
+[All device pages](README.md)

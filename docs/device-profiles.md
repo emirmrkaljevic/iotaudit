@@ -3,6 +3,8 @@ title: Device profiles and known-issue hints
 ---
 # Device profiles and known-issue hints
 
+For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
+
 iotaudit tries to recognise what a device is from traffic, hostname, and MAC vendor, then compares destinations with a bundled profile when one matches.
 
 ## Bundled profiles

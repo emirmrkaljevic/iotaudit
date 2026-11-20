@@ -3,7 +3,7 @@ title: MCP server
 ---
 # MCP server
 
-The MCP server exposes iotaudit's audit tools over stdio, so a local MCP client can run them. It is not a network service.
+The MCP server exposes iotaudit's audit tools over stdio, so a local MCP client can run them. It is not a network service. For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
 
 ```bash
 pip install "iotaudit[mcp]"

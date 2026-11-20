@@ -3,6 +3,8 @@ title: "What does a Tuya smart plug send?"
 ---
 # What does a Tuya smart plug send?
 
+For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
+
 Most white-label Wi-Fi plugs, bulbs and feeders run Tuya firmware. What you can usually expect on the network:
 
 - HTTPS (443) and MQTT over TLS (8883) to the Tuya region cloud: tuyaeu.com, tuyaus.com or tuyacn.com depending on the account region.
@@ -24,4 +26,4 @@ sudo iotaudit auto
 
 Full install instructions: [README](https://github.com/emirmrkaljevic/iotaudit#readme). Only audit networks and devices you own. All data stays local, no telemetry.
 
-[All device pages](../)
+[All device pages](README.md)

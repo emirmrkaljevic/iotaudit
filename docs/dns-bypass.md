@@ -3,6 +3,8 @@ title: DNS that bypasses your resolver
 ---
 # DNS that bypasses your resolver
 
+For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
+
 Since 0.1.19, iotaudit flags devices that send DNS around your router, not only classic hardcoded public DNS (for example 8.8.8.8 or 1.1.1.1, including IPv6). It also reports:
 
 - DNS-over-TLS, when the device talks on port 853

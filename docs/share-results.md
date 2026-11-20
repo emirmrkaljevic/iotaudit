@@ -3,6 +3,8 @@ title: "Share your iotaudit results without leaking your network"
 ---
 # Share your iotaudit results without leaking your network
 
+For a short start, see the [README](https://github.com/emirmrkaljevic/iotaudit#readme).
+
 When I ask for help with a strange device in a forum, I want to show what it does without posting my local IP addresses. Since 0.1.16, `iotaudit export` can leave them out.
 
 ```
