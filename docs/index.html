@@ -138,12 +138,12 @@ footer{border-top:1px solid var(--rule);padding:18px 0 40px;font-family:var(--mo
 footer nav a{margin-right:18px}
 
 @media (max-width:980px){
-  .hero{grid-template-columns:1fr;gap:44px;padding-top:40px}
+  .hero{grid-template-columns:minmax(0,1fr);gap:44px;padding-top:40px}
   .grade{border-left:0;border-top:1px solid var(--ink);padding:22px 0 0}
-  .sec-head,.how,.cols,.sign{grid-template-columns:1fr;gap:14px}
-  .spec{grid-template-columns:1fr;gap:28px}
+  .sec-head,.how,.cols,.sign{grid-template-columns:minmax(0,1fr);gap:14px}
+  .spec{grid-template-columns:minmax(0,1fr);gap:28px}
   .spec .gutter{display:none}
-  .modes div{grid-template-columns:1fr;gap:6px}
+  .modes div{grid-template-columns:minmax(0,1fr);gap:6px}
   .scale{grid-template-columns:repeat(3,1fr)}
   .scale div:nth-child(3){border-right:0}
   .scale div:nth-child(-n+3){border-bottom:1px solid var(--ink)}
