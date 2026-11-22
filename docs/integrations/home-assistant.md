@@ -151,4 +151,4 @@ automation:
 
 To run audits on a schedule, use cron on the audit machine, for example once a night.
 
-[Back to the device pages](../index.md) | [iotaudit on GitHub](https://github.com/emirmrkaljevic/iotaudit)
+[Back to the device pages](../guide.md) | [iotaudit on GitHub](https://github.com/emirmrkaljevic/iotaudit)

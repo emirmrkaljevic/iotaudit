@@ -1,5 +1,5 @@
 ---
-title: iotaudit device profiles
+title: iotaudit guide and device pages
 ---
 # What do smart devices on your network send?
 

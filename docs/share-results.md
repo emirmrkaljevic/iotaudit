@@ -44,4 +44,4 @@ Capture metadata is removed from the top-level `meta` object and from any nested
 
 If you only need the JSON copy, `iotaudit redact audit.json` still writes `audit.redacted.json`. Give the result a quick read before you post it. Redaction is not a guarantee of complete anonymity. Only audit networks and devices you own. All data stays local, no telemetry.
 
-[All device pages](./)
+[All device pages](guide.md)
