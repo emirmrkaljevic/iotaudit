@@ -273,7 +273,8 @@ def test_json_and_html_keep_the_summary_and_put_the_verdict_first():
 
 
 def test_checked_in_sample_report_shows_a_verdict():
-    html = (Path(__file__).resolve().parents[1] / "docs" / "examples" / "sample-report.html").read_text(encoding="utf-8")
+    sample = Path(__file__).resolve().parents[1] / "docs" / "examples" / "sample-report.html"
+    html = sample.read_text(encoding="utf-8")
     assert "iotaudit 0.1.7" in html
     assert "<b>Verdict.</b>" in html
     assert "Telnet open on the LAN" in html
