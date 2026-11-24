@@ -3,6 +3,11 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.26] - 2026-11-24
+
+### Fixed
+- `iotaudit analyze` (and the `analyze_pcap` MCP tool) on a fresh install read Ethernet captures as raw bytes, printed `unknown LL type [1]` and wrote a report with no devices. The capture reader now loads Scapy's Ethernet, IP and DNS dissectors before opening the file. Thanks to carlosferreyra for the report.
+
 ## [0.1.25] - 2026-11-18
 
 ### Added

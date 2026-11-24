@@ -403,6 +403,13 @@ def from_pcap(path: str, collector: Collector, pcapdroid: bool | None = None) ->
     """Read a pcap/pcapng. PCAPdroid captures (Android) are detected automatically: the bogus
     Ethernet header + per-packet trailer are stripped, and app names are recorded in
     collector.apps. Pass pcapdroid=True/False to force detection on/off."""
+    # Load the link layer and IP/DNS dissectors before opening the file. Without
+    # them a fresh interpreter has no LL type 1 (Ethernet) binding, and Scapy
+    # falls back to Raw packets, so the report comes out empty.
+    import scapy.layers.dns  # noqa: F401
+    import scapy.layers.inet  # noqa: F401
+    import scapy.layers.inet6  # noqa: F401
+    import scapy.layers.l2  # noqa: F401
     from scapy.utils import PcapReader
 
     if not hasattr(collector, "apps"):

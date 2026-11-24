@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![PyPI](https://img.shields.io/pypi/v/iotaudit.svg)](https://pypi.org/project/iotaudit/)
+[![emirmrkaljevic/iotaudit MCP server](https://glama.ai/mcp/servers/emirmrkaljevic/iotaudit/badges/score.svg)](https://glama.ai/mcp/servers/emirmrkaljevic/iotaudit)
 
 <p align="center"><a href="https://skintoscan.com/#packages"><img src=".github/assets/skintoscan-support.svg" width="684" alt="Support my open-source work: get a SkinToScan pack"></a><br><sub>If you find this useful, you can support me by getting a SkinToScan pack, my other project. It's a one-time purchase that directly funds my open-source work.</sub></p>
 <p align="center"><a href="https://skintoscan.com/checkout/?add-to-cart=138"><img src=".github/assets/skintoscan-pack-1.svg" width="220" alt="Buy Single Picture Check, €4.49"></a> <a href="https://skintoscan.com/checkout/?add-to-cart=139"><img src=".github/assets/skintoscan-pack-5.svg" width="220" alt="Buy 5 Picture Pack, €19.99 (popular)"></a> <a href="https://skintoscan.com/checkout/?add-to-cart=140"><img src=".github/assets/skintoscan-pack-15.svg" width="220" alt="Buy 15 Picture Pack, €54.99"></a></p>
@@ -54,7 +55,7 @@ Skip the typed confirmation with `--i-own-this-network` once you already know th
 - HTML and PDF reports, CSV or Markdown export, and `--redact` when you want to share a report without local addresses.
 - Grades can go into Home Assistant over MQTT (`--ha-mqtt`, with discovery so sensors appear without YAML) or as a JSON file (`--ha-json`). See the [Home Assistant guide](docs/integrations/home-assistant.md).
 
-Current release is **0.1.25**. A [sample report](docs/examples/sample-report.html) and a short demo are on the [report page](docs/report.md). A full vulnerability feed is still on the [roadmap](ROADMAP.md).
+Current release is **0.1.26**. A [sample report](docs/examples/sample-report.html) and a short demo are on the [report page](docs/report.md). A full vulnerability feed is still on the [roadmap](ROADMAP.md).
 
 ![iotaudit auto demo (sample data)](docs/auto-demo.svg)
 

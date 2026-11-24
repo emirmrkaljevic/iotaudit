@@ -1,3 +1,3 @@
 """iotaudit - audit your own smart-home devices."""
 
-__version__ = "0.1.25"
+__version__ = "0.1.26"
