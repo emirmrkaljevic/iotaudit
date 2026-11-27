@@ -1,0 +1,11 @@
+{
+  "name": "iotaudit",
+  "version": "0.1.26",
+  "description": "Audit your own smart-home devices locally: who they talk to, plaintext vs TLS, open ports, and an A-F grade with an HTML report.",
+  "mcpServers": {
+    "iotaudit": {
+      "command": "uvx",
+      "args": ["--from", "iotaudit[mcp]", "iotaudit-mcp"]
+    }
+  }
+}

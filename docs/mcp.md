@@ -12,6 +12,12 @@ iotaudit-mcp
 
 I also list the server on [mcpservers.org](https://mcpservers.org/servers/emirmrkaljevic/iotaudit) and the official MCP Registry.
 
+For Gemini CLI, the repository is also an extension (`gemini-extension.json` at the root runs the server through `uvx`):
+
+```bash
+gemini extensions install https://github.com/emirmrkaljevic/iotaudit
+```
+
 ## Tools
 
 - `analyze_pcap`: analyse a pcap of your own network. You get per-device destinations, plaintext vs TLS, an A-F grade, a one-line safety verdict, and offline `known_issue_hints` from banners already in the capture. A hint changes the grade only when the version match is exact and the severity is critical. When `report_path` is set, the HTML report is written there. `pdf=true` also writes a PDF next to that HTML (same name, `.pdf` suffix) and needs the `iotaudit[pdf]` extra. `pdf=true` requires `report_path`.
