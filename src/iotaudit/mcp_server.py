@@ -3,20 +3,40 @@ Run with `iotaudit-mcp` (stdio). Requires `pip install iotaudit[mcp]`."""
 
 from __future__ import annotations
 
+import sys
+
 from .analyze import build_devices, to_dict
 from .capture import Collector, from_pcap, live
 from .diff import diff_results as compare_audits
 from .enrich import Geo
 from .report import render_html
 
+MISSING_MCP_HELP = (
+    "iotaudit: the MCP server needs the optional 'mcp' package, which is not installed.\n"
+    "Install it with one of:\n"
+    "  pip install \"iotaudit[mcp]\"\n"
+    "  uvx --from \"iotaudit[mcp]\" iotaudit-mcp\n"
+    "  uvx --with \"mcp>=1.2\" iotaudit mcp\n"
+)
 
-def create_server():
+
+class MissingMCPError(ImportError):
+    """Raised when the optional mcp package is not installed."""
+
+
+def _server_class():
     try:  # mcp >= 2
         from mcp.server.mcpserver import MCPServer as Server
-    except ImportError:  # mcp 1.x
-        from mcp.server.fastmcp import FastMCP as Server
+    except ImportError:
+        try:  # mcp 1.x
+            from mcp.server.fastmcp import FastMCP as Server
+        except ImportError as exc:
+            raise MissingMCPError(MISSING_MCP_HELP) from exc
+    return Server
 
-    mcp = Server("iotaudit")
+
+def create_server():
+    mcp = _server_class()("iotaudit")
 
     @mcp.tool()
     def analyze_pcap(path: str, device_ips: list[str] | None = None,
@@ -106,7 +126,12 @@ def create_server():
 
 
 def main() -> None:
-    create_server().run()
+    try:
+        server = create_server()
+    except MissingMCPError:
+        sys.stderr.write(MISSING_MCP_HELP)
+        raise SystemExit(2) from None
+    server.run()
 
 
 if __name__ == "__main__":

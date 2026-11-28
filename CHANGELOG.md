@@ -3,6 +3,15 @@
 All notable changes to iotaudit are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.27] - 2026-11-28
+
+### Fixed
+- The official MCP Registry entry started the server with `uvx iotaudit mcp`, which does not install the optional `mcp` package, so the server crashed on start with `ModuleNotFoundError`. The entry now adds `--with mcp>=1.2`.
+- `iotaudit-mcp` and `iotaudit mcp` without the `mcp` package now print the install commands and exit with code 2 instead of a traceback.
+
+### Changed
+- The package metadata and the MCP Registry entry point to the project site, https://emirmrkaljevic.github.io/iotaudit/ . The GitHub repository is listed under Repository.
+
 ## [0.1.26] - 2026-11-24
 
 ### Fixed

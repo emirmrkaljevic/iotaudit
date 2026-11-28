@@ -10,6 +10,15 @@ pip install "iotaudit[mcp]"
 iotaudit-mcp
 ```
 
+To run it without installing anything permanently, use `uvx`. The MCP Registry entry does the same, adding the `mcp` package with `--with`:
+
+```bash
+uvx --from "iotaudit[mcp]" iotaudit-mcp
+uvx --with "mcp>=1.2" iotaudit mcp
+```
+
+If the `mcp` package is missing (for example after a plain `pip install iotaudit`), `iotaudit-mcp` and `iotaudit mcp` exit with code 2 and print these install commands instead of a Python traceback.
+
 I also list the server on [mcpservers.org](https://mcpservers.org/servers/emirmrkaljevic/iotaudit) and the official MCP Registry.
 
 For Gemini CLI, the repository is also an extension (`gemini-extension.json` at the root runs the server through `uvx`):

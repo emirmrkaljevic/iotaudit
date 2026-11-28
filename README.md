@@ -55,7 +55,7 @@ Skip the typed confirmation with `--i-own-this-network` once you already know th
 - HTML and PDF reports, CSV or Markdown export, and `--redact` when you want to share a report without local addresses.
 - Grades can go into Home Assistant over MQTT (`--ha-mqtt`, with discovery so sensors appear without YAML) or as a JSON file (`--ha-json`). See the [Home Assistant guide](docs/integrations/home-assistant.md).
 
-Current release is **0.1.26**. A [sample report](docs/examples/sample-report.html) and a short demo are on the [report page](docs/report.md). A full vulnerability feed is still on the [roadmap](ROADMAP.md).
+Current release is **0.1.27**. A [sample report](docs/examples/sample-report.html) and a short demo are on the [report page](docs/report.md). A full vulnerability feed is still on the [roadmap](ROADMAP.md).
 
 ![iotaudit auto demo (sample data)](docs/auto-demo.svg)
 
@@ -64,6 +64,8 @@ Current release is **0.1.26**. A [sample report](docs/examples/sample-report.htm
 ```bash
 pip install "iotaudit[mcp]"
 iotaudit-mcp
+# or, without installing:
+uvx --from "iotaudit[mcp]" iotaudit-mcp
 ```
 
 This starts a local MCP server (stdio) so a client on your machine can run the same audit tools. `diff_results` compares two saved JSON audits the same way `iotaudit diff` does. The server is listed on [mcpservers.org](https://mcpservers.org/servers/emirmrkaljevic/iotaudit) and the official MCP Registry. Tool list and options: [MCP server](docs/mcp.md).
